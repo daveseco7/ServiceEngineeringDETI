@@ -24,7 +24,7 @@ def Localidade(path):
 		return "Invalid request"
 
 
-@app.route('/ReplenishStock', methods=['GET'])
+@app.route('/replenishstock', methods=['GET'])
 def Reservations():
 	return "FODASSE SUIL CARALHO P*QUE PUTA DE CHATO"
 
