@@ -24,17 +24,16 @@ def Localidade(path):
 		return "Invalid request"
 
 
-@app.route('/replenishstock', methods=['GET'])
+@app.route('/replenishstock', methods=['POST'])
 def Reservations():
 
-	#RECEBE INFO DO MANAGER APP
+	#INSERE A INFO NA BD DO MAIN SERVICE
 
-	#replenishstock(json)
+	#RECEBE INFO DO MANAGER APP
+	
+
 	return json.dumps({"200" : "OK"})
 
-
-
-def replenishstock(json):
 
 
 
