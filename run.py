@@ -2,19 +2,8 @@ import sqlite3
 import sys
 import json
 from flask import Flask, request
-from flask_restful import Resource
 
 app = Flask(__name__)
-
-
-
-
-class localization(Resource):
-	def get(self, local):
-		restaurants = ConnectDB('SELECT RestaurantID,Name From Restaurant where Localization=\'' + local + '\';',2)
-		menus = ConnectDB('SELECT * from Meal LEFT OUTER JOIN Menu on Meal.MealID=Menu.MealID', 2)
-		return  menus
-
 
 @app.route('/Localization/<path:path>', methods=['GET'])
 def Localidade(path):
@@ -29,13 +18,10 @@ def Localidade(path):
 				if rest[0] == item[3]:
 					menu["Menu"].append({ "item" : item[0], "price": item[2]})
 			resposta["Restaurants"].append({"Name" : rest[1], "ProviderID": rest[0], "Menu" : menu})	
-		#return json.dumps(resposta)
-
-
+		return json.dumps(resposta)
 	else:
 		return "Invalid request"
 
-api.add_resource(localization, '/localization/<string:local>')
 
 @app.route('/ReplenishStock', methods=['GET'])
 def Reservations():
