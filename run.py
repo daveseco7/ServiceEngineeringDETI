@@ -5,7 +5,7 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-@app.route('/Localization/<path:path>', methods=['GET'])
+@app.route('/localization/<path:path>', methods=['GET'])
 def Localidade(path):
 	if request.method == 'GET':
 		restaurants = ConnectDB('SELECT RestaurantID,Name From Restaurant where Localization=\'' + path + '\';',2)
@@ -13,11 +13,12 @@ def Localidade(path):
 
 		resposta = json.loads('{"Restaurants":  [ ]}')
 		for rest in restaurants:
-			menu = json.loads('{"Menu": [] }')
+			menu = []
 			for item in menus:
 				if rest[0] == item[3]:
-					menu["Menu"].append({ "item" : item[0], "price": item[2]})
-			resposta["Restaurants"].append({"Name" : rest[1], "ProviderID": rest[0], "Menu" : menu})	
+					menu.append({ "item" : item[0], "price": item[2]})
+			print menu
+			resposta["Restaurants"].append({"Name" : rest[1], "ProviderID": rest[0],"Menu": menu})	
 		return json.dumps(resposta)
 	else:
 		return "Invalid request"
