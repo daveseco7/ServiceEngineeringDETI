@@ -22,9 +22,12 @@ def Localidade(path):
 	else:
 		return "Invalid request"
 
-@app.route('/Reservations/<path:path>', methods=['GET'])
-def Reservations(path):
-	return path
+@app.route('/ReplenishStock', methods=['GET'])
+def Reservations():
+	return "FODASSE SUIL CARALHO P*QUE PUTA DE CHATO"
+
+
+
 
 
 
@@ -48,5 +51,5 @@ def ConnectDB(query, op):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=8080)
+    app.run(host='0.0.0.0',port=80)
 
