@@ -7,6 +7,7 @@ To run this project you need:
 	* _$sudo pip install Flask_ 
 
 How to run:
-1. First run the script to create the database 
-	*$sh createBD.sh*
-2. Run the python script "*$python run.py*"
+* First run the script to create the database 
+	* _$sh createBD.sh_
+* Run the python script
+	* _$python run.py_
