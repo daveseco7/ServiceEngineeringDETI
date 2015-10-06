@@ -5,9 +5,8 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-@app.route('/Localidade/<path:path>', methods=['GET'])
+@app.route('/Localization/<path:path>', methods=['GET'])
 def Localidade(path):
-
 	if request.method == 'GET':
 		restaurants = ConnectDB('SELECT RestaurantID,Name From Restaurant where Localization=\'' + path + '\';',2)
 		menus = ConnectDB('SELECT * from Meal LEFT OUTER JOIN Menu on Meal.MealID=Menu.MealID', 2)
@@ -22,6 +21,10 @@ def Localidade(path):
 		return json.dumps(resposta)
 	else:
 		return "Invalid request"
+
+@app.route('/Reservations/<path:path>', methods=['GET'])
+def Reservations(path):
+	return path
 
 
 
