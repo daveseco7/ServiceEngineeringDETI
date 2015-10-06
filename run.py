@@ -26,10 +26,15 @@ def Localidade(path):
 
 @app.route('/replenishstock', methods=['GET'])
 def Reservations():
-	return "FODASSE SUIL CARALHO P*QUE PUTA DE CHATO"
+
+	#RECEBE INFO DO MANAGER APP
+
+	#replenishstock(json)
+	return json.dumps({"200" : "OK"})
 
 
 
+def replenishstock(json):
 
 
 
