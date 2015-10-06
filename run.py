@@ -17,7 +17,7 @@ def Localidade(path):
 			for item in menus:
 				if rest[0] == item[3]:
 					menu["Menu"].append({ "item" : item[0], "price": item[2]})
-			resposta["Restaurants"].append({"Name" : rest[1] , "Menu" : menu})	
+			resposta["Restaurants"].append({"Name" : rest[1], "ProviderID": rest[0], "Menu" : menu})	
 		return json.dumps(resposta)
 	else:
 		return "Invalid request"
