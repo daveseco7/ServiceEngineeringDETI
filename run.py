@@ -71,19 +71,22 @@ def Localidade(path):
 def Reservations():
 
 
-	#RECEBE INFO DO MANAGER APP
+	#recebe dados da manager app
 	data =  request.get_data()
 	data = json.loads(data)
 
-	username = data['username']
+	for info in data['info']:
+		username = info['username']
+
 	rest = Restaurant.query.filter_by(managerusername=username).first()
 
 
+	#Guarda dados na base de dados do main service
 	if(rest.restaurantID == None ):
 		return json.dumps({"404" : "Manager username not found"})
 	else:
 		menu = data['menu']
-		mealid = 4
+		print menu
 		for item in menu:
 			meal = Meal(item['name'], item['price'])
 			mealID = db.session.query(Meal).count()
@@ -92,6 +95,8 @@ def Reservations():
 			db.session.add(menu)
 			db.session.commit()
 
+
+		data['info'].append({"providerID":rest.restaurantID})
 
 		
 		#Enviar dados para REST do manel
