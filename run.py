@@ -3,6 +3,7 @@ from flask.ext.sqlalchemy import SQLAlchemy
 import sqlite3
 import sys
 import json
+import requests
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
@@ -90,7 +91,14 @@ def Reservations():
 			db.session.add(meal)
 			db.session.add(menu)
 			db.session.commit()
-	return json.dumps({"200" : "OK"})
+
+
+		
+		#Enviar dados para REST do manel
+		url = "http://127.0.0.1:8500/"                   				#URL DO MANEL
+		headers = {'Content-Type': 'application/json'}					#content type
+		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+		return json.dumps({"200" : "OK"})
 
 
 
