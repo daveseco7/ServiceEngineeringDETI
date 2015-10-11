@@ -1,14 +1,13 @@
-from flask import Flask, request
+from flask import Flask, request, render_template, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
 import sqlite3
 import sys
 import json
 import requests
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 db = SQLAlchemy(app)
-
 
 class Restaurant(db.Model):
 	__tablename__ = "restaurant"
@@ -103,7 +102,36 @@ def Reservations():
 		headers = {'Content-Type': 'application/json'}					#content type
 		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
-		#return json.dumps(data)
+
+
+@app.route('/signup')
+def signup():
+ 
+    # read the posted values from the UI
+    #print request.form['inputName']
+    #_localizaion = request.form['localization']
+    #_username = request.form['username']
+
+    #print _localization
+    #print _username
+
+    print "submited"
+
+    #if _name and _localizaion and _username:
+    #    return json.dumps({'html':'<span>All fields good !!</span>'})
+    #else:
+    #    return json.dumps({'html':'<span>Enter the required fields</span>'})
+
+    return render_template('index.html')
+
+
+
+
+
+@app.route('/')
+def home():
+        return render_template('index.html')
+
 
 if __name__ == '__main__':
 	db.create_all()
