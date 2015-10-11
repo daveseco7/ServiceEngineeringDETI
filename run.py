@@ -86,7 +86,6 @@ def Reservations():
 		return json.dumps({"404" : "Manager username not found"})
 	else:
 		menu = data['menu']
-		print menu
 		for item in menu:
 			meal = Meal(item['name'], item['price'])
 			mealID = db.session.query(Meal).count()
