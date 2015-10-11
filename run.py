@@ -100,12 +100,11 @@ def Reservations():
 
 		
 		#Enviar dados para REST do manel
-		url = "http://127.0.0.1:8500/"                   				#URL DO MANEL
+		url = "http://ogaviao.ddns.net:5000/replenishstock"                   				#URL DO MANEL
 		headers = {'Content-Type': 'application/json'}					#content type
 		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
-
-
+		#return json.dumps(data)
 
 if __name__ == '__main__':
 	db.create_all()
