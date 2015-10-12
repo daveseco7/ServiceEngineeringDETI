@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>1 Tap Meal</title>
+ 
+    
+    <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
+ 
+    <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+    <link href="../static/error.css" rel="stylesheet">
+    
+  </head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="error-template">
+                <h1>
+                    Error!</h1>
+                <h2>
+                    Please dont leave empty fields</h2>
+                <div class="error-details">
+                    Click on the home button and restart the processes of sing in
+                </div>
+                <div class="error-actions">
+                    <a  onclick="window.location.href='{{url_for('home')}}'" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-home"></span>
+                        Take Me Home </a>
+                    <a class="btn btn-default btn-lg"><span class="glyphicon glyphicon-envelope"></span> Contact Support </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+      <footer class="footer">
+        <p>&copy; Services engineering 2015</p>
+      </footer>
+    
+</div>
+</body>
+</html>

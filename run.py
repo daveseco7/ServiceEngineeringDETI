@@ -17,11 +17,10 @@ class Restaurant(db.Model):
 	managerusername = db.Column(db.String(50), unique=True)
 	classification = db.Column(db.Integer)
 
-	def __init__(self, restaurantname, localization, managerusername, classification):
+	def __init__(self, restaurantname, localization, managerusername):
 		self.restaurantname = restaurantname
 		self.localization = localization
 		self.managerusername = managerusername
-		self.classification = classification
 
 class Meal(db.Model):
 	__tablename__ = "meal"
@@ -108,37 +107,30 @@ def Reservations():
 def signup():
  
     # read the posted values from the UI
-    #print request.form['inputName']
-    #_localizaion = request.form['localization']
-    #_username = request.form['username']
+    name =  request.args.get('inputName')
+    localization = request.args.get('localization')
+    username = request.args.get('username')
 
-    #print _localization
-    #print _username
-
-    print "submited"
-
-    #if _name and _localizaion and _username:
-    #    return json.dumps({'html':'<span>All fields good !!</span>'})
-    #else:
-    #    return json.dumps({'html':'<span>Enter the required fields</span>'})
-
-    return render_template('index.html')
-
-
-
+    if name and localization and username:
+    	rest = Restaurant(name, localization, username)
+    	db.session.add(rest)
+    	db.session.commit()
+    	return render_template('accepted.html')
+    else:
+    	return render_template('error.html')
 
 
 @app.route('/')
 def home():
-        return render_template('index.html')
+	return render_template('index.html')
 
 
 if __name__ == '__main__':
 	db.create_all()
 	#insert
-	r1 = Restaurant('restaurant 1', 'Aveiro', 'dave1', 1)
-	r2 = Restaurant('restaurant 2', 'Aveiro', 'dave2', 1)
-	r3 = Restaurant('restaurant 3', 'Aveiro', 'dave3', 1)
+	r1 = Restaurant('restaurant 1', 'Aveiro', 'dave1')
+	r2 = Restaurant('restaurant 2', 'Aveiro', 'dave2')
+	r3 = Restaurant('restaurant 3', 'Aveiro', 'dave3')
 	m1 = Meal('Arroz com frango',13)
 	m2 = Meal('Atum em lata',14)
 	men1 = Menu(1,1)
