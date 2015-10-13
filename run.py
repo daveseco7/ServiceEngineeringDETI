@@ -50,14 +50,14 @@ def Localidade(path):
 	if request.method == 'GET':
 		
 		restaurants = Restaurant.query.filter_by(localization=path).all()
-		menus = db.session.query(Meal.name, Meal.price, Menu.restaurantID).select_from(Meal).join(Menu).all()
+		menus = db.session.query(Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).all()
 		response = json.loads('{"Restaurants":  [ ]}')
 		
 		for rest in restaurants:
 			menu = []
 			for item in menus:
 				if rest.restaurantID == item.restaurantID:
-					menu.append({ "item" : item.name, "price": item.price})
+					menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
 			response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 		return json.dumps(response)
 
