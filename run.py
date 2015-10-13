@@ -14,7 +14,7 @@ class Restaurant(db.Model):
 	restaurantID = db.Column(db.Integer, primary_key=True)
 	restaurantname = db.Column(db.String(50))
 	localization = db.Column(db.String(50))
-	managerusername = db.Column(db.String(50), unique=True)
+	managerusername = db.Column(db.String(50))
 	classification = db.Column(db.Integer)
 
 	def __init__(self, restaurantname, localization, managerusername):
@@ -105,7 +105,7 @@ def Reservations():
 
 @app.route('/signup')
 def signup():
- 
+
     # read the posted values from the UI
     name =  request.args.get('inputName')
     localization = request.args.get('localization')
