@@ -78,7 +78,6 @@ def Reservations():
 
 	rest = Restaurant.query.filter_by(managerusername=username).first()
 
-
 	#Guarda dados na base de dados do main service
 	if(rest.restaurantID == None ):
 		return json.dumps({"404" : "Manager username not found"})
@@ -91,17 +90,33 @@ def Reservations():
 			db.session.add(meal)
 			db.session.add(menu)
 			db.session.commit()
-
+			item['itemID'] = mealID
 
 		data['info'].append({"providerID":rest.restaurantID})
 
+
+
 		
 		#Enviar dados para REST do manel
-		url = "http://ogaviao.ddns.net:5000/replenishstock"                   				#URL DO MANEL
-		headers = {'Content-Type': 'application/json'}					#content type
-		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
-		return json.dumps({"200" : "OK"})
+		#url = "http://ogaviao.ddns.net:5000/replenishstock"                   				#URL DO MANEL
+		#headers = {'Content-Type': 'application/json'}					#content type
+		#r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+		#return json.dumps({"200" : "OK"})
 
+		return json.dumps(data)
+
+@app.route('/doreservation')
+def doreservation():
+
+	#recebe dados da reservation app do user
+	data =  request.get_data()
+	data = json.loads(data)
+
+	#Enviar dados para REST do manel
+	url = "http://ogaviao.ddns.net:5000/replenishstock"            	#URL DO MANEL
+	headers = {'Content-Type': 'application/json'}						#content type
+	r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+	return json.dumps({"200" : "OK"})
 
 @app.route('/signup')
 def signup():
