@@ -11,8 +11,7 @@
     
   </head>
  
-  <body>
- 
+  <body> 
     <div class="container">
       <div class="header">
         <nav>
@@ -20,19 +19,18 @@
             <li role="presentation" class="active"><a href="#">Sign Up</a></li>
           </ul>
         </nav>
-        <h3 class="text-muted">University of Aveiro DETI</h3>
-      </div>
- 
+        <img src="../static/ua_logo.png" alt="University of Aveiro" width="400" height="90">
+      </div> 
       <div class="jumbotron">
-        <h1>1 Tap Meal</h1>
+        <img src="../static/1tapmeal.png" alt="University of Aveiro" width="200" height="150">
         <form class="form-signin" action="/signup">
         <label for="inputName" class="sr-only">Name</label>
-        <input type="name" name="inputName" id="inputName" class="form-control" placeholder="Name" required autofocus>
+        <input type="name" name="inputName" id="inputName" class="form-control" placeholder="Restaurant name" required autofocus>
         <label for="localization" class="sr-only">Localization (city) </label>
-        <input type="localization" name="localization" id="localization" class="form-control" placeholder="Localization" required autofocus>
+        <input type="localization" name="localization" id="localization" class="form-control" placeholder="Localization - city" required autofocus>
         <label for="username" class="sr-only">Manager username</label>
         <input type="username" name="username" id="username" class="form-control" placeholder="Manager Username" required>
-        <button id="btnSignUp" class="btn btn-lg btn-primary btn-block" type="submit" onclick="window.location.href='{{url_for('signup')}}'">Sign up</button>
+        <button id="btnSignUp" class="btn btn-lg btn-primary btn-block" type="submit" onclick="window.location.href='{{url_for('signup')}}'">Sign up</button>  
       </form>
       </div>
  
