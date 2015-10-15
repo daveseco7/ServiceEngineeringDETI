@@ -145,10 +145,10 @@ def home():
 
 
 def startSMSservice():
-	data = json.dumps({"serviceudl" : "http:46.101.14.39:80/getSMSdata", "name":"ComposerDave"})
+	data = json.dumps({"serviceurl" : "testefinal", "name":"glassfishpunheta"})
 	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service"            	#URL DO LUIS
 	headers = {'Content-Type': 'application/json'}						#content type
-	r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+	r = requests.put(url, data=data, headers=headers) 	#efetua o request
 	print json.loads(data)
 
 
