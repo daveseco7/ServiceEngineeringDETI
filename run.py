@@ -116,7 +116,10 @@ def doreservation():
 	r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 	return json.dumps({"200" : "OK"})
 
-@app.route('/')
+@app.route('/getSMS', methods=['POST'])
+	
+	#receber 
+	print request.get_data()
 
 
 
@@ -145,12 +148,19 @@ def home():
 
 
 def startSMSservice():
-	data = json.dumps({"serviceurl" : "testefinal", "name":"glassfishpunheta"})
+	data = json.dumps({"serviceurl" : "http://46.101.14.39:80/getSMS", "name":"ComposerDave"})
 	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service"            	#URL DO LUIS
 	headers = {'Content-Type': 'application/json'}						#content type
 	r = requests.put(url, data=data, headers=headers) 	#efetua o request
 	print json.loads(data)
 
+def setREGEXtoSMS():
+
+	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"MENU#"}, {"regex":"ADD#"} ] })
+	#url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
+	#headers = {'Content-Type': 'application/json'}						#content type
+	#r = requests.put(url, data=data, headers=headers) 	#efetua o request
+	print json.loads(data)
 
 
 if __name__ == '__main__':
@@ -173,7 +183,7 @@ if __name__ == '__main__':
 	db.session.commit()
 
 	print "a enviar dados"
-	startSMSservice()
+	#startSMSservice()
 	app.run(host='0.0.0.0',port=80)
 
 
