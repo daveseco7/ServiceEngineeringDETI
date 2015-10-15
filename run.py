@@ -117,7 +117,7 @@ def doreservation():
 	return json.dumps({"200" : "OK"})
 
 @app.route('/getSMS', methods=['POST'])
-	
+def getSMS():
 	#receber 
 	print request.get_data()
 
@@ -156,10 +156,10 @@ def startSMSservice():
 
 def setREGEXtoSMS():
 
-	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"MENU#"}, {"regex":"ADD#"} ] })
-	#url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
-	#headers = {'Content-Type': 'application/json'}						#content type
-	#r = requests.put(url, data=data, headers=headers) 	#efetua o request
+	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"MENU#"}, {"regex":"ADD#"} ,{"regex":"RESERVATION#"}] })
+	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
+	headers = {'Content-Type': 'application/json'}						#content type
+	r = requests.put(url, data=data, headers=headers) 	#efetua o request
 	print json.loads(data)
 
 
@@ -183,7 +183,8 @@ if __name__ == '__main__':
 	db.session.commit()
 
 	print "a enviar dados"
-	#startSMSservice()
+	startSMSservice()
+	setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
 
