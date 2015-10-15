@@ -98,12 +98,10 @@ def Reservations():
 
 		
 		#Enviar dados para REST do manel
-		#url = "http://ogaviao.ddns.net:5000/replenishstock"                   				#URL DO MANEL
-		#headers = {'Content-Type': 'application/json'}					#content type
-		#r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
-		#return json.dumps({"200" : "OK"})
-
-		return json.dumps(data)
+		url = "http://ogaviao.ddns.net:5000/replenishstock"                   				#URL DO MANEL
+		headers = {'Content-Type': 'application/json'}					#content type
+		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+		return json.dumps({"200" : "OK"})
 
 @app.route('/doreservation')
 def doreservation():
@@ -117,6 +115,12 @@ def doreservation():
 	headers = {'Content-Type': 'application/json'}						#content type
 	r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 	return json.dumps({"200" : "OK"})
+
+@app.route('/')
+
+
+
+
 
 @app.route('/signup')
 def signup():
@@ -140,6 +144,15 @@ def home():
 	return render_template('index.html')
 
 
+def startSMSservice():
+	data = json.dumps({"serviceudl" : "http:46.101.14.39:80/getSMSdata", "name":"ComposerDave"})
+	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service"            	#URL DO LUIS
+	headers = {'Content-Type': 'application/json'}						#content type
+	r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+	print json.loads(data)
+
+
+
 if __name__ == '__main__':
 	db.create_all()
 	#insert
@@ -159,7 +172,9 @@ if __name__ == '__main__':
 	db.session.add(men2)
 	db.session.commit()
 
-
+	print "a enviar dados"
+	startSMSservice()
 	app.run(host='0.0.0.0',port=80)
+
 
 
