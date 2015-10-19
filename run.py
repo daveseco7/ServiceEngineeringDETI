@@ -48,26 +48,13 @@ class Menu(db.Model):
 def Localidade(path):
 	
 	if request.method == 'GET':
-		
-		restaurants = Restaurant.query.filter_by(localization=path).all()
-		menus = db.session.query(Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).all()
-		response = json.loads('{"Restaurants":  [ ]}')
-		
-		for rest in restaurants:
-			menu = []
-			for item in menus:
-				if rest.restaurantID == item.restaurantID:
-					menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
-			response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
-		return json.dumps(response)
-
+		return getLocalidade(path)
 	else:
 		return "Invalid request"
 
 
 @app.route('/replenishstock', methods=['POST'])
-def Reservations():
-
+def replenishstock():
 
 	#recebe dados da manager app
 	data =  request.get_data()
@@ -94,11 +81,8 @@ def Reservations():
 
 		data['info'].append({"providerID":rest.restaurantID})
 
-
-
-		
 		#Enviar dados para REST do manel
-		url = "http://ogaviao.ddns.net:5000/replenishstock"                   				#URL DO MANEL
+		url = "http://ogaviao.ddns.net:80/replenishstock"                   				#URL DO MANEL
 		headers = {'Content-Type': 'application/json'}					#content type
 		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
@@ -111,15 +95,39 @@ def doreservation():
 	data = json.loads(data)
 
 	#Enviar dados para REST do manel
-	url = "http://ogaviao.ddns.net:5000/replenishstock"            	#URL DO MANEL
+	url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
 	headers = {'Content-Type': 'application/json'}						#content type
-	r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+	r = requests.post(url, data=json.dumps(data), headers=headers) 	    #efetua o request
 	return json.dumps({"200" : "OK"})
+
 
 @app.route('/getSMS', methods=['POST'])
 def getSMS():
-	#receber 
-	print request.get_data()
+
+	#receber
+	data = request.get_data()
+	data = json.loads(data)
+
+	sms = data['body']
+	number = data['senderAddress']
+	sms = sms.split('#')
+
+	if sms[1] == "city":
+		print "get"
+		return getLocalidade(sms[2])
+	elif sms[1] == 'add':
+		print "add"
+
+	elif sms[1] == 'reservation':
+		print "reserv"
+
+	else:
+		return json.dumps({"406" : "Not acceptable"})
+
+
+
+	#add#luisduarte#menu#meal:peixe#Price:10#Doses:20#Dmeal:carne#Price:10#Doses:20
+
 
 
 
@@ -161,6 +169,19 @@ def setREGEXtoSMS():
 	headers = {'Content-Type': 'application/json'}						#content type
 	r = requests.put(url, data=data, headers=headers) 	#efetua o request
 	print json.loads(data)
+
+def getLocalidade(city):
+	restaurants = Restaurant.query.filter_by(localization=city).all()
+	menus = db.session.query(Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).all()
+	response = json.loads('{"Restaurants":  [ ]}')
+	for rest in restaurants:
+		menu = []
+		for item in menus:
+			if rest.restaurantID == item.restaurantID:
+				menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+		response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+	return json.dumps(response)
+
 
 
 if __name__ == '__main__':
