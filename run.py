@@ -59,33 +59,18 @@ def replenishstock():
 	#recebe dados da manager app
 	data =  request.get_data()
 	data = json.loads(data)
+	data = restock(data)
 
-	for info in data['info']:
-		username = info['username']
-
-	rest = Restaurant.query.filter_by(managerusername=username).first()
-
-	#Guarda dados na base de dados do main service
-	if(rest.restaurantID == None ):
+	if data == None:
 		return json.dumps({"404" : "Manager username not found"})
 	else:
-		menu = data['menu']
-		for item in menu:
-			meal = Meal(item['name'], item['price'])
-			mealID = db.session.query(Meal).count()
-			menu = Menu(rest.restaurantID, mealID)
-			db.session.add(meal)
-			db.session.add(menu)
-			db.session.commit()
-			item['itemID'] = mealID
-
-		data['info'].append({"providerID":rest.restaurantID})
-
+		
 		#Enviar dados para REST do manel
-		url = "http://ogaviao.ddns.net:80/replenishstock"                   				#URL DO MANEL
+		url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
 		headers = {'Content-Type': 'application/json'}					#content type
 		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
+
 
 @app.route('/doreservation')
 def doreservation():
@@ -103,7 +88,6 @@ def doreservation():
 
 @app.route('/getSMS', methods=['POST'])
 def getSMS():
-
 	#receber
 	data = request.get_data()
 	data = json.loads(data)
@@ -115,8 +99,29 @@ def getSMS():
 	if sms[1] == "city":
 		print "get"
 		return getLocalidade(sms[2])
+
+
 	elif sms[1] == 'add':
 		print "add"
+		data = json.dumps({"info":[{"username": sms[2]}],"menu":[]})
+		data = json.loads(data)
+		i=4
+		while i <= len(sms)-3:
+			data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
+			i= i+3
+
+		data = restock(data)
+		if data == None:
+			print "error"
+			return json.dumps({"404" : "Manager username not found"})
+		else:
+			print "sending"
+
+			#Enviar dados para REST do manel
+			url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
+			headers = {'Content-Type': 'application/json'}					#content type
+			r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+			return json.dumps({"200" : "OK"})
 
 	elif sms[1] == 'reservation':
 		print "reserv"
@@ -124,9 +129,6 @@ def getSMS():
 	else:
 		return json.dumps({"406" : "Not acceptable"})
 
-
-
-	#add#luisduarte#menu#meal:peixe#Price:10#Doses:20#Dmeal:carne#Price:10#Doses:20
 
 
 
@@ -181,6 +183,34 @@ def getLocalidade(city):
 				menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
 		response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 	return json.dumps(response)
+
+
+def restock(data):
+
+	for info in data['info']:
+		username = info['username']
+	
+	rest = Restaurant.query.filter_by(managerusername=username).first()
+	
+	#Guarda dados na base de dados do main service
+	if(rest.restaurantID == None ):
+		return none
+	else:
+		menu = data['menu']
+		for item in menu:
+			meal = Meal(item['name'], item['price'])
+			mealID = db.session.query(Meal).count()
+			menu = Menu(rest.restaurantID, mealID)
+			db.session.add(meal)
+			db.session.add(menu)
+			db.session.commit()
+			item['itemID'] = mealID
+
+		data['info'].append({"providerID":rest.restaurantID})
+	return data
+
+
+
 
 
 
