@@ -95,13 +95,8 @@ def getSMS():
 	sms = data['body']
 	number = data['senderAddress']
 
-#verificar 
-	print "asdasdasdadas"
+	#verificar 
 	sms = sms.split('#')
-	print sms[2]
-	print sms[3]
-	print sms[4]
-	print sms[5]
 
 	if sms[2] == "city":
 		print "get"
@@ -111,25 +106,18 @@ def getSMS():
 		print "add"
 		data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
 		data = json.loads(data)
-		print "antes do while"
+
 		i=5
-		while i <= len(sms)-4:
+		while i <= len(sms)-3:
 			data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
 			i= i+3
-			print sms[i]
-			print sms[i+1]
-			print sms[i+2]
 		
-		print "depois do while"
-		print json.dumps(data)
 		data = restock(data)
-		print "depois do restock"
 		if data == None:
 			print "error"
 			return json.dumps({"404" : "Manager username not found"})
 		else:
 			print "sending"
-
 			#Enviar dados para REST do manel
 			url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
 			headers = {'Content-Type': 'application/json'}					#content type
