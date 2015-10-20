@@ -96,24 +96,34 @@ def getSMS():
 	number = data['senderAddress']
 
 #verificar 
-
+	print "asdasdasdadas"
 	sms = sms.split('#')
+	print sms[2]
+	print sms[3]
+	print sms[4]
+	print sms[5]
 
 	if sms[2] == "city":
 		print "get"
-		return getLocalidade(sms[3])
-
+		return getLocalidade(sms[4])
 
 	elif sms[2] == 'add':
 		print "add"
-		data = json.dumps({"info":[{"username": sms[2]}],"menu":[]})
+		data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
 		data = json.loads(data)
+		print "antes do while"
 		i=5
 		while i <= len(sms)-4:
 			data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
 			i= i+3
-
+			print sms[i]
+			print sms[i+1]
+			print sms[i+2]
+		
+		print "depois do while"
+		print json.dumps(data)
 		data = restock(data)
+		print "depois do restock"
 		if data == None:
 			print "error"
 			return json.dumps({"404" : "Manager username not found"})
@@ -169,7 +179,7 @@ def startSMSservice():
 
 def setREGEXtoSMS():
 
-	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"#1tapmeal#city#"}, {"regex":"#1tapmeal#add#"} ,{"regex":"#1tapmeal#reservation#"}] })
+	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"#1tapmeal#city#.*"}, {"regex":"#1tapmeal#add#.*"} ,{"regex":"#1tapmeal#reservation#.*"}] })
 	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
 	headers = {'Content-Type': 'application/json'}						#content type
 	r = requests.put(url, data=data, headers=headers) 	#efetua o request
