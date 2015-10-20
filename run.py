@@ -94,19 +94,22 @@ def getSMS():
 
 	sms = data['body']
 	number = data['senderAddress']
+
+#verificar 
+
 	sms = sms.split('#')
 
-	if sms[1] == "city":
+	if sms[2] == "city":
 		print "get"
-		return getLocalidade(sms[2])
+		return getLocalidade(sms[3])
 
 
-	elif sms[1] == 'add':
+	elif sms[2] == 'add':
 		print "add"
 		data = json.dumps({"info":[{"username": sms[2]}],"menu":[]})
 		data = json.loads(data)
-		i=4
-		while i <= len(sms)-3:
+		i=5
+		while i <= len(sms)-4:
 			data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
 			i= i+3
 
@@ -123,7 +126,7 @@ def getSMS():
 			r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
 			return json.dumps({"200" : "OK"})
 
-	elif sms[1] == 'reservation':
+	elif sms[2] == 'reservation':
 		print "reserv"
 
 	else:
@@ -166,7 +169,7 @@ def startSMSservice():
 
 def setREGEXtoSMS():
 
-	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"MENU#"}, {"regex":"ADD#"} ,{"regex":"RESERVATION#"}] })
+	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"#1tapmeal#city#"}, {"regex":"#1tapmeal#add#"} ,{"regex":"#1tapmeal#reservation#"}] })
 	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
 	headers = {'Content-Type': 'application/json'}						#content type
 	r = requests.put(url, data=data, headers=headers) 	#efetua o request
@@ -208,9 +211,6 @@ def restock(data):
 
 		data['info'].append({"providerID":rest.restaurantID})
 	return data
-
-
-
 
 
 
