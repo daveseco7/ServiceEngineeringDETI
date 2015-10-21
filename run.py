@@ -141,7 +141,7 @@ def signup():
 
     # read the posted values from the UI
     name =  request.args.get('inputName')
-    localization = request.args.get('localization')
+    localization = request.args.get('localization').lower()
     username = request.args.get('username')
 
     if name and localization and username:
@@ -174,6 +174,7 @@ def setREGEXtoSMS():
 	print json.loads(data)
 
 def getLocalidade(city):
+	city = city.lower()
 	restaurants = Restaurant.query.filter_by(localization=city).all()
 	menus = db.session.query(Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).all()
 	response = json.loads('{"Restaurants":  [ ]}')
@@ -215,9 +216,9 @@ def restock(data):
 if __name__ == '__main__':
 	db.create_all()
 	#insert
-	r1 = Restaurant('restaurant 1', 'Aveiro', 'dave1')
-	r2 = Restaurant('restaurant 2', 'Aveiro', 'dave2')
-	r3 = Restaurant('restaurant 3', 'Aveiro', 'dave3')
+	r1 = Restaurant('restaurant 1', 'aveiro', 'dave1')
+	r2 = Restaurant('restaurant 2', 'aveiro', 'dave2')
+	r3 = Restaurant('restaurant 3', 'aveiro', 'dave3')
 	m1 = Meal('Arroz com frango',13)
 	m2 = Meal('Atum em lata',14)
 	men1 = Menu(1,1)
@@ -232,8 +233,8 @@ if __name__ == '__main__':
 	db.session.commit()
 
 	print "a enviar dados"
-	startSMSservice()
-	setREGEXtoSMS()
+	#startSMSservice()
+	#setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
 
