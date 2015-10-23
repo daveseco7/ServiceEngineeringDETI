@@ -72,12 +72,31 @@ def replenishstock():
 		return json.dumps({"200" : "OK"})
 
 
-@app.route('/doreservation')
+@app.route('/doreservation', methods=['POST'])
 def doreservation():
 
 	#recebe dados da reservation app do user
 	data =  request.get_data()
-	data = json.loads(data)
+	#data = json.dumps({"username":"dave1","city":"aveiro","restaurant":"restaurant 1","meal":"peixe","quantity":"2","timestamp":"12"})
+	data =json.loads(data)
+
+	#{
+    #"username": "dave1",
+    #"city": "Aveiro",
+    #"restaurnt": "restaunrant1",
+    #"meal": "peixe",
+    #"quantity": "2",
+    #"hora": "12:00"
+	#}
+
+	response = doReserve(data)
+
+	#{
+	#"itemID": 8,
+	#"quantity": 2,
+	#"clientID": 12,
+    #"timestamp": 1445556339
+	#}	
 
 	#Enviar dados para REST do manel
 	url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
@@ -126,14 +145,18 @@ def getSMS():
 
 	elif sms[2] == 'reservation':
 		print "reserv"
-
+		#1tapmeal#reservation#dave1#aveiro#restaurant 1#peixe#5#12:00
+		data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":sms[8]})
+		data =json.loads(data)
+		response = doReserve(data)
+		
+		#Enviar dados para REST do manel
+		url = "http://ogaviao.ddns.net:80/doreservation"            	    	#URL DO MANEL
+		headers = {'Content-Type': 'application/json'}							#content type
+		r = requests.post(url, data=json.dumps(data), headers=headers) 	    #efetua o request
+		return json.dumps({"200" : "OK"})
 	else:
 		return json.dumps({"406" : "Not acceptable"})
-
-
-
-
-
 
 
 @app.route('/signup')
@@ -212,6 +235,25 @@ def restock(data):
 	return data
 
 
+def doReserve(data):
+
+	city = data['city'].lower()
+	meal=data['meal']
+	restaurant=data['restaurant']
+	quantity = data['quantity']
+	timestamp = data['timestamp']
+
+	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()
+	
+	if itemID == None:
+		return json.dumps({"400":"None existing request on DB"})
+	else:
+		#get client ID from helder
+		return json.dumps({"itemID":itemID, "quantity":quantity,"clientID":"12","timestamp":timestamp})
+
+
+
+
 
 if __name__ == '__main__':
 	db.create_all()
@@ -219,7 +261,7 @@ if __name__ == '__main__':
 	r1 = Restaurant('restaurant 1', 'aveiro', 'dave1')
 	r2 = Restaurant('restaurant 2', 'aveiro', 'dave2')
 	r3 = Restaurant('restaurant 3', 'aveiro', 'dave3')
-	m1 = Meal('Arroz com frango',13)
+	m1 = Meal('peixe',13)
 	m2 = Meal('Atum em lata',14)
 	men1 = Menu(1,1)
 	men2 = Menu(2,2)
