@@ -60,56 +60,77 @@ def replenishstock():
 	data =  request.get_data()
 	data = json.loads(data)
 
+	#Token check
+	response = json.dumps({"token": data["info"][0]["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}															#content type
+	r = requests.post(url, data=response, headers=headers) 														#efetua o request
+	response = json.loads(r.text)
 
-
-	#VERIFICAR USERNAME AQUI
-
-
-
-
-	data = restock(data)
-
-	if data == None:
-		return json.dumps({"404" : "Manager username not found"})
+	if  response["username"] !=  data["info"][0]["username"]:
+		return json.dumps({"404" : "Invalid Username!"})
 	else:
-		
-		#Enviar dados para REST do manel
-		url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
-		headers = {'Content-Type': 'application/json'}					#content type
-		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
-		return json.dumps({"200" : "OK"})
+		data = restock(data)
+		if data == None:
+			return json.dumps({"404" : "Manager username not found"})
+		else:
+			#Enviar dados para REST do manel
+			url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
+			headers = {'Content-Type': 'application/json'}					#content type
+			r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+			return json.dumps({"200" : "OK"})
 
 
 @app.route('/doreservation', methods=['POST'])
 def doreservation():
 
-	print "asdasdad"
-
-	#recebe dados da reservation app do user
-	data =  request.get_data()
-	#data = json.dumps({"username":"dave1","city":"aveiro","restaurant":"restaurant 1","meal":"peixe","quantity":"2","timestamp":"12"})
-	data =json.loads(data)
-
-
-	
-	#VERIFICAR USERNAME AQUI
-
-
-
+	#recebe
 	#{
     #"username": "dave1",
     #"city": "Aveiro",
     #"restaurnt": "restaunrant1",
     #"meal": "peixe",
     #"quantity": "2",
-    #"hora": "12:00"
+    #"hora": "1445556339"
+    #"token":"asdasd"
 	#}
 
-	for i in data:
-		print i
 
-	response = doReserve(data)
 
+	#recebe dados da reservation app do user
+	data =  request.get_data()
+	data =json.loads(data)
+
+
+	#Token check
+	response = json.dumps({"token": data["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}															#content type
+	r = requests.post(url, data=response, headers=headers) 														#efetua o request
+	response = json.loads(r.text)
+
+	print response
+
+	if  response["username"] !=  data["username"]:
+		return json.dumps({"404" : "Invalid Username!"})
+	else:
+		data = json.dumps({"username":data["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":data["timestamp"], "clientID": response["user_id"]})
+		data = json.loads(data)
+		data= doReserve(data)
+
+		if data == None:
+			return json.dumps({"404" : "Manager username not found"})
+		else:
+
+			print data
+			#Enviar dados para REST do manel
+			url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
+			headers = {'Content-Type': 'application/json'}						#content type
+			r = requests.post(url, data=data, headers=headers) 	    #efetua o request
+			return json.dumps({"200" : "OK"})
+
+
+	#envia
 	#{
 	#"itemID": 8,
 	#"quantity": 2,
@@ -117,11 +138,6 @@ def doreservation():
     #"timestamp": 1445556339
 	#}	
 
-	#Enviar dados para REST do manel
-	url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
-	headers = {'Content-Type': 'application/json'}						#content type
-	r = requests.post(url, data=json.dumps(data), headers=headers) 	    #efetua o request
-	return json.dumps({"200" : "OK"})
 
 
 @app.route('/getSMS', methods=['POST'])
@@ -138,37 +154,45 @@ def getSMS():
 
 	if sms[2] == "city":
 		print "get"
-		return getLocalidade(sms[4])
+		return getLocalidade(sms[3])
 
 	elif sms[2] == 'add':
 		print "add"
 
+		#Username check
+		data = json.dumps({"phone":number})
+		url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
+		headers = {'Content-Type': 'application/json'}															#content type
+		r = requests.post(url, data=data, headers=headers) 														#efetua o request
+		response = json.loads(r.text)
 
-
-		#VERIFICAR USERNAME AQUI
-
-
-
-
-		data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
-		data = json.loads(data)
-
-		i=5
-		while i <= len(sms)-3:
-			data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
-			i= i+3
-		
-		data = restock(data)
-		if data == None:
-			print "error"
-			return json.dumps({"404" : "Manager username not found"})
+		if response['result'] == "error":
+			return json.dumps({"404" : "Number not registred"})
 		else:
-			print "sending"
-			#Enviar dados para REST do manel
-			url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
-			headers = {'Content-Type': 'application/json'}					#content type
-			r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
-			return json.dumps({"200" : "OK"})
+			if  response['usename'] != sms[3]:
+				return json.dumps({"404" : "Invalid Username!"})
+
+			else:
+				data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
+				data = json.loads(data)
+
+				i=5
+				while i <= len(sms)-3:
+					data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
+					i= i+3
+				
+				data = restock(data)
+				if data == None:
+					print "error"
+					return json.dumps({"404" : "Manager username not found"})
+				else:
+					print "sending"
+					#Enviar dados para REST do manel
+					url = "http://ogaviao.ddns.net:80/replenishstock"               						#URL DO MANEL
+					headers = {'Content-Type': 'application/json'}											#content type
+					r = requests.post(url, data=json.dumps(data), headers=headers) 							#efetua o request
+					return json.dumps({"200" : "OK"})
+
 
 	elif sms[2] == 'reservation':
 		print "reserv"
@@ -178,22 +202,31 @@ def getSMS():
 		data = json.dumps({"phone":number})
 		url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
 		headers = {'Content-Type': 'application/json'}															#content type
-		r = requests.put(url, data=data, headers=headers) 														#efetua o request
+		r = requests.post(url, data=data, headers=headers) 														#efetua o request
 		response = json.loads(r.text)
 
-		if not response['user_id'] != response:
-			return json.dumps({"404" : "Username not found!"})
-		
+		if response['result'] == "error":
+			return json.dumps({"404" : "Number not registred"})
 		else:
-			data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":sms[8]})
-			data =json.loads(data)
-			response = doReserve(data)
-			
-			#Do a reservation
-			url = "http://ogaviao.ddns.net:80/doreservation"            	    	#URL DO MANEL
-			headers = {'Content-Type': 'application/json'}							#content type
-			r = requests.post(url, data=json.dumps(data), headers=headers) 	    	#efetua o request
-			return json.dumps({"200" : "OK"})
+			if  response['usename'] != sms[3]:
+				return json.dumps({"404" : "Invalid Username!"})
+
+			else:
+				data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":sms[8], "clientID":response['user_id']})
+				data =json.loads(data)
+				response = doReserve(data)
+
+				if response == None:
+					print "error"
+					return json.dumps({"404" : "Invalid items for reservation!"})
+				
+
+				#Do a reservation
+				print "sending"
+				url = "http://ogaviao.ddns.net:80/doreservation"            	    		#URL DO MANEL
+				headers = {'Content-Type': 'application/json'}								#content type
+				r = requests.post(url, data=response, headers=headers) 	    	#efetua o request
+				return json.dumps({"200" : "OK"})
 	else:
 		return json.dumps({"406" : "Not acceptable"})
 
@@ -248,7 +281,6 @@ def getLocalidade(city):
 		response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 	return json.dumps(response)
 
-
 def restock(data):
 
 	for info in data['info']:
@@ -276,21 +308,23 @@ def restock(data):
 
 def doReserve(data):
 
+	print "doreserve"
+
 	city = data['city'].lower()
 	meal=data['meal']
 	restaurant=data['restaurant']
 	quantity = data['quantity']
 	timestamp = data['timestamp']
+	clientID = data['clientID']
 
-	print "query"
+	print "aqui"
 
 	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()
 	
 	if itemID == None:
-		return json.dumps({"400":"None existing request on DB"})
+		return json.dumps({"404":"None existing request on DB"})
 	else:
-		#get client ID from helder
-		return json.dumps({"itemID":itemID, "quantity":quantity,"clientID":"12","timestamp":timestamp})
+		return json.dumps({"itemID":2, "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
 
 
 
