@@ -59,6 +59,14 @@ def replenishstock():
 	#recebe dados da manager app
 	data =  request.get_data()
 	data = json.loads(data)
+
+
+
+	#VERIFICAR USERNAME AQUI
+
+
+
+
 	data = restock(data)
 
 	if data == None:
@@ -75,10 +83,18 @@ def replenishstock():
 @app.route('/doreservation', methods=['POST'])
 def doreservation():
 
+	print "asdasdad"
+
 	#recebe dados da reservation app do user
 	data =  request.get_data()
 	#data = json.dumps({"username":"dave1","city":"aveiro","restaurant":"restaurant 1","meal":"peixe","quantity":"2","timestamp":"12"})
 	data =json.loads(data)
+
+
+	
+	#VERIFICAR USERNAME AQUI
+
+
 
 	#{
     #"username": "dave1",
@@ -88,6 +104,9 @@ def doreservation():
     #"quantity": "2",
     #"hora": "12:00"
 	#}
+
+	for i in data:
+		print i
 
 	response = doReserve(data)
 
@@ -123,6 +142,14 @@ def getSMS():
 
 	elif sms[2] == 'add':
 		print "add"
+
+
+
+		#VERIFICAR USERNAME AQUI
+
+
+
+
 		data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
 		data = json.loads(data)
 
@@ -146,15 +173,27 @@ def getSMS():
 	elif sms[2] == 'reservation':
 		print "reserv"
 		#1tapmeal#reservation#dave1#aveiro#restaurant 1#peixe#5#12:00
-		data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":sms[8]})
-		data =json.loads(data)
-		response = doReserve(data)
+
+		#Username check
+		data = json.dumps({"phone":number})
+		url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
+		headers = {'Content-Type': 'application/json'}															#content type
+		r = requests.put(url, data=data, headers=headers) 														#efetua o request
+		response = json.loads(r.text)
+
+		if not response['user_id'] != response:
+			return json.dumps({"404" : "Username not found!"})
 		
-		#Enviar dados para REST do manel
-		url = "http://ogaviao.ddns.net:80/doreservation"            	    	#URL DO MANEL
-		headers = {'Content-Type': 'application/json'}							#content type
-		r = requests.post(url, data=json.dumps(data), headers=headers) 	    #efetua o request
-		return json.dumps({"200" : "OK"})
+		else:
+			data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":sms[8]})
+			data =json.loads(data)
+			response = doReserve(data)
+			
+			#Do a reservation
+			url = "http://ogaviao.ddns.net:80/doreservation"            	    	#URL DO MANEL
+			headers = {'Content-Type': 'application/json'}							#content type
+			r = requests.post(url, data=json.dumps(data), headers=headers) 	    	#efetua o request
+			return json.dumps({"200" : "OK"})
 	else:
 		return json.dumps({"406" : "Not acceptable"})
 
@@ -184,16 +223,16 @@ def home():
 def startSMSservice():
 	data = json.dumps({"serviceurl" : "http://46.101.14.39:80/getSMS", "name":"ComposerDave"})
 	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service"            	#URL DO LUIS
-	headers = {'Content-Type': 'application/json'}						#content type
-	r = requests.put(url, data=data, headers=headers) 	#efetua o request
+	headers = {'Content-Type': 'application/json'}															#content type
+	r = requests.put(url, data=data, headers=headers) 														#efetua o request
 	print json.loads(data)
 
 def setREGEXtoSMS():
 
 	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"#1tapmeal#city#.*"}, {"regex":"#1tapmeal#add#.*"} ,{"regex":"#1tapmeal#reservation#.*"}] })
 	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
-	headers = {'Content-Type': 'application/json'}						#content type
-	r = requests.put(url, data=data, headers=headers) 	#efetua o request
+	headers = {'Content-Type': 'application/json'}																	#content type
+	r = requests.put(url, data=data, headers=headers) 																#efetua o request
 	print json.loads(data)
 
 def getLocalidade(city):
@@ -243,6 +282,8 @@ def doReserve(data):
 	quantity = data['quantity']
 	timestamp = data['timestamp']
 
+	print "query"
+
 	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()
 	
 	if itemID == None:
@@ -275,8 +316,8 @@ if __name__ == '__main__':
 	db.session.commit()
 
 	print "a enviar dados"
-	#startSMSservice()
-	#setREGEXtoSMS()
+	startSMSservice()
+	setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
 
