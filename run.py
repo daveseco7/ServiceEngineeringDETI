@@ -258,7 +258,7 @@ def signup():
     # read the posted values from the UI
     name =  request.args.get('inputName')
     localization = request.args.get('localization').lower()
-    username = request.args.get('username')
+    username = session['username']
 
     if name and localization and username:
     	rest = Restaurant(name, localization, username)
@@ -274,6 +274,8 @@ def home():
 	token = session.get('access_token', None)
 	user = validate_token(token)
 	if user:
+		session['username']=user[1]
+		session['user_id']=user[0]
 		return render_template('index.html')
 	return redirect(authentication_server+"?next="+my_server)
 

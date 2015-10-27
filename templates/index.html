@@ -14,11 +14,6 @@
   <body> 
     <div class="container">
       <div class="header">
-        <nav>
-          <ul class="nav nav-pills pull-right">
-            <li role="presentation" class="active"><a href="#">Sign Up</a></li>
-          </ul>
-        </nav>
         <img src="../static/ua_logo.png" alt="University of Aveiro" width="400" height="90">
       </div> 
       <div class="jumbotron">
@@ -28,8 +23,6 @@
         <input type="name" name="inputName" id="inputName" class="form-control" placeholder="Restaurant name" required autofocus>
         <label for="localization" class="sr-only">Localization (city) </label>
         <input type="localization" name="localization" id="localization" class="form-control" placeholder="Localization - city" required autofocus>
-        <label for="username" class="sr-only">Manager username</label>
-        <input type="username" name="username" id="username" class="form-control" placeholder="Manager Username" required>
         <button id="btnSignUp" class="btn btn-lg btn-primary btn-block" type="submit" onclick="window.location.href='{{url_for('signup')}}'">Sign up</button>  
       </form>
       </div>
