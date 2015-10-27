@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
+import datetime
 import sqlite3
 import sys
 import json
@@ -96,12 +97,10 @@ def doreservation():
 	#}
 
 
-
 	#recebe dados da reservation app do user
 	data =  request.get_data()
 	data =json.loads(data)
-
-
+	
 	#Token check
 	response = json.dumps({"token": data["token"]})
 	url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
@@ -109,12 +108,11 @@ def doreservation():
 	r = requests.post(url, data=response, headers=headers) 														#efetua o request
 	response = json.loads(r.text)
 
-	print response
-
 	if  response["username"] !=  data["username"]:
 		return json.dumps({"404" : "Invalid Username!"})
 	else:
-		data = json.dumps({"username":data["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":data["timestamp"], "clientID": response["user_id"]})
+		time = int(datetime.datetime.strptime(data['timestamp'], '%d/%m/%Y:%H:%M').strftime("%s"))
+		data = json.dumps({"username":data["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":time, "clientID": response["user_id"]})
 		data = json.loads(data)
 		data= doReserve(data)
 
@@ -195,29 +193,28 @@ def getSMS():
 
 
 	elif sms[2] == 'reservation':
-		print "reserv"
 		#1tapmeal#reservation#dave1#aveiro#restaurant 1#peixe#5#12:00
-
+			
 		#Username check
 		data = json.dumps({"phone":number})
 		url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
 		headers = {'Content-Type': 'application/json'}															#content type
 		r = requests.post(url, data=data, headers=headers) 														#efetua o request
 		response = json.loads(r.text)
-
+	
 		if response['result'] == "error":
 			return json.dumps({"404" : "Number not registred"})
 		else:
-			if  response['usename'] != sms[3]:
+			if  response['username'] != sms[3]:
 				return json.dumps({"404" : "Invalid Username!"})
 
 			else:
-				data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":sms[8], "clientID":response['user_id']})
+				time = time = int(datetime.datetime.strptime(sms[8], '%d/%m/%Y:%H:%M').strftime("%s")) 
+				data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":time, "clientID":response['user_id']})
 				data =json.loads(data)
 				response = doReserve(data)
 
 				if response == None:
-					print "error"
 					return json.dumps({"404" : "Invalid items for reservation!"})
 				
 
