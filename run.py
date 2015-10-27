@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, url_for
+from flask import Flask, request, render_template, url_for, session, redirect
 from flask.ext.sqlalchemy import SQLAlchemy
 import datetime
 import sqlite3
@@ -9,6 +9,12 @@ import requests
 app = Flask(__name__, template_folder='templates')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 db = SQLAlchemy(app)
+
+app.secret_key = '1tapmeal'
+authentication_server = 'http://idp.moreirahelder.com'
+token_validation_server = 'http://idp.moreirahelder.com/api/getuser'
+my_server = 'http://46.101.14.39:80/auth_callback'
+
 
 class Restaurant(db.Model):
 	__tablename__ = "restaurant"
@@ -43,6 +49,24 @@ class Menu(db.Model):
 		self.mealID = mealID
 		self.restaurantID = restaurantID
 
+
+def validate_token(token):
+	if not token:
+		return None
+	headers = {'Content-type': 'application/json'}
+	data = {'token': token} 
+	response = requests.post(token_validation_server, json.dumps(data), headers=headers)
+	data = json.loads(response.text)
+	if data['result']:
+		return (data['user_id'], data['username'])
+	return None
+
+@app.route("/auth_callback")
+def auth_callback():
+	token = request.args.get('access_token', None)
+	if token:
+		session['access_token'] = token
+	return redirect('/')
 
 
 @app.route('/localization/<path:path>', methods=['GET'])
@@ -247,7 +271,11 @@ def signup():
 
 @app.route('/')
 def home():
-	return render_template('index.html')
+	token = session.get('access_token', None)
+	user = validate_token(token)
+	if user:
+		return render_template('index.html')
+	return redirect(authentication_server+"?next="+my_server)
 
 
 def startSMSservice():
