@@ -57,7 +57,7 @@ def validate_token(token):
 	data = {'token': token} 
 	response = requests.post(token_validation_server, json.dumps(data), headers=headers)
 	data = json.loads(response.text)
-	if data['result']:
+	if data['result'] == "success":
 		return (data['user_id'], data['username'])
 	return None
 
