@@ -169,9 +169,8 @@ def getSMS():
 	data = json.loads(data)
 
 	sms = data['body']
-	number = data['senderAddress']
-	requestID = data['requestid']
-
+	number = str(data['senderAddress'])
+	requestID = str(data['requestid'])
 
 	#verificar 
 	sms = sms.split('#')
@@ -180,14 +179,13 @@ def getSMS():
 
 		data = getLocalidade(sms[3])
 		response = json.dumps({"body" : data , "status": 200})
-		url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+		url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    					#URL DO LUIS
 		headers = {'Content-Type': 'application/json'}																							#content type
 		r = requests.post(url, data=response, headers=headers) 																					#efetua o request
 		return json.dumps({"200" : "OK"})
-		
+
 
 	elif sms[2] == 'add':
-		print "add"
 
 		#Username check
 		data = json.dumps({"phone":number})
@@ -196,13 +194,41 @@ def getSMS():
 		r = requests.post(url, data=data, headers=headers) 														#efetua o request
 		response = json.loads(r.text)
 
+		print "ca fora"
+
 		if response['result'] == "error":
+
+			print "ERROR IF 1"
+
+			SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 404})
+			url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+			headers = {'Content-Type': 'application/json'}																							#content type
+			r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
 			return json.dumps({"404" : "Number not registred"})
+
 		else:
-			if  response['usename'] != sms[3]:
+
+			print "asd"
+			print sms[3]
+			print response['username']
+
+
+			if  response['username'] != sms[3]:
+
+				print "ERROR IF 2"
+
+				SMSresponse = json.dumps({"body" : "Invalid Username!" , "status": 404})
+				url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+				headers = {'Content-Type': 'application/json'}																							#content type
+				r = requests.post(url, data=SMSresponse, headers=headers) 																					#efetua o request
 				return json.dumps({"404" : "Invalid Username!"})
 
 			else:
+				print "asdasdsa"
+
+				print "Tudo ok"
+
+
 				data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
 				data = json.loads(data)
 
@@ -210,17 +236,34 @@ def getSMS():
 				while i <= len(sms)-3:
 					data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
 					i= i+3
+
+				print data
 				
 				data = restock(data)
+
+				print "depois"
+
+				print data
 				if data == None:
-					print "error"
+
+					SMSresponse = json.dumps({"body" : "Manager not found" , "status": 404})
+					url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+					headers = {'Content-Type': 'application/json'}																							#content type
+					r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
 					return json.dumps({"404" : "Manager username not found"})
+
 				else:
 					print "sending"
 					#Enviar dados para REST do manel
 					url = "http://ogaviao.ddns.net:80/replenishstock"               						#URL DO MANEL
 					headers = {'Content-Type': 'application/json'}											#content type
 					r = requests.post(url, data=json.dumps(data), headers=headers) 							#efetua o request
+
+
+					SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
+					url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+					headers = {'Content-Type': 'application/json'}																							#content type
+					r = requests.post(url, data=SMSresponse, headers=headers) 																					#efetua o request
 					return json.dumps({"200" : "OK"})
 
 
@@ -235,28 +278,52 @@ def getSMS():
 		response = json.loads(r.text)
 	
 		if response['result'] == "error":
+			SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 404})
+			url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+			headers = {'Content-Type': 'application/json'}																							#content type
+			r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
 			return json.dumps({"404" : "Number not registred"})
 		else:
 			if  response['username'] != sms[3]:
+				SMSresponse = json.dumps({"body" : "Invalid Username!" , "status": 404})
+				url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+				headers = {'Content-Type': 'application/json'}																							#content type
+				r = requests.post(url, data=SMSresponse, headers=headers) 																					#efetua o request
 				return json.dumps({"404" : "Invalid Username!"})
 
 			else:
-				time = time = int(datetime.datetime.strptime(sms[8], '%d/%m/%Y:%H:%M').strftime("%s")) 
+				
+				time = int(datetime.datetime.strptime(sms[8], '%d/%m/%Y:%H:%M').strftime("%s")) 
 				data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":time, "clientID":response['user_id']})
 				data =json.loads(data)
 				response = doReserve(data)
 
+				print response
+
 				if response == None:
-					return json.dumps({"404" : "Invalid items for reservation!"})
-				
+					SMSresponse = json.dumps({"body" : "Invalid items for reservation!" , "status": 404})
+					url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+					headers = {'Content-Type': 'application/json'}																							#content type
+					r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
+					return json.dumps({"404" : "Invalid items for reservation!"})			
 
 				#Do a reservation
 				print "sending"
 				url = "http://ogaviao.ddns.net:80/doreservation"            	    		#URL DO MANEL
 				headers = {'Content-Type': 'application/json'}								#content type
-				r = requests.post(url, data=response, headers=headers) 	    	#efetua o request
+				r = requests.post(url, data=response, headers=headers) 	    				#efetua o request
+
+				SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
+				url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+				headers = {'Content-Type': 'application/json'}																							#content type
+				r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
 				return json.dumps({"200" : "OK"})
 	else:
+
+		SMSresponse = json.dumps({"body" : "Not acceptable!" , "status": 406})
+		url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    								#URL DO LUIS
+		headers = {'Content-Type': 'application/json'}																									#content type
+		r = requests.post(url, data=SMSresponse, headers=headers) 																						#efetua o request
 		return json.dumps({"406" : "Not acceptable"})
 
 
@@ -324,8 +391,8 @@ def restock(data):
 	rest = Restaurant.query.filter_by(managerusername=username).first()
 	
 	#Guarda dados na base de dados do main service
-	if(rest.restaurantID == None ):
-		return none
+	if rest == None :
+		return None
 	else:
 		menu = data['menu']
 		for item in menu:
@@ -338,7 +405,7 @@ def restock(data):
 			item['itemID'] = mealID
 
 		data['info'].append({"providerID":rest.restaurantID})
-	return data
+		return data
 
 
 def doReserve(data):
@@ -357,7 +424,7 @@ def doReserve(data):
 	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()
 	
 	if itemID == None:
-		return json.dumps({"404":"None existing request on DB"})
+		return None
 	else:
 		return json.dumps({"itemID":2, "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
 
