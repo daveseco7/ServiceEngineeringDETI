@@ -170,13 +170,21 @@ def getSMS():
 
 	sms = data['body']
 	number = data['senderAddress']
+	requestID = data['requestid']
+
 
 	#verificar 
 	sms = sms.split('#')
 
 	if sms[2] == "city":
-		print "get"
-		return getLocalidade(sms[3])
+
+		data = getLocalidade(sms[3])
+		response = json.dumps({"body" : data , "status": 200})
+		url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
+		headers = {'Content-Type': 'application/json'}																							#content type
+		r = requests.post(url, data=response, headers=headers) 																					#efetua o request
+		return json.dumps({"200" : "OK"})
+		
 
 	elif sms[2] == 'add':
 		print "add"
