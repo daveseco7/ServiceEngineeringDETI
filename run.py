@@ -81,6 +81,33 @@ def Localidade(path):
 @app.route('/replenishstock', methods=['POST'])
 def replenishstock():
 
+	
+	#recebe
+	#{
+    #"info": [
+    #    {
+    #        "token": "asdasdasd",
+    #        "username": "dave1",
+    #        "providerID": 2
+    #    }
+    #],
+    #"menu": [
+    #    {
+    #        "itemID": 1,
+    #        "name": "arrozdecao",
+    #        "price": 12,
+    #        "quantity": 20
+    #    },
+    #    {
+    #        "itemID": 2,
+    #        "name": "arrozdegato",
+    #        "price": 10,
+    #        "quantity": 25
+    #    }
+    #]
+	#}
+
+
 	#recebe dados da manager app
 	data =  request.get_data()
 	data = json.loads(data)
