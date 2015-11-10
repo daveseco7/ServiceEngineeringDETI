@@ -221,6 +221,7 @@ def getSMS():
 		r = requests.post(url, data=data, headers=headers) 														#efetua o request
 		response = json.loads(r.text)
 
+		print response
 		print "ca fora"
 
 		if response['result'] == "error":
@@ -321,6 +322,7 @@ def getSMS():
 			else:
 				
 				time = int(datetime.datetime.strptime(sms[8], '%d/%m/%Y:%H:%M').strftime("%s")) 
+				print time
 				data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":time, "clientID":response['user_id']})
 				data =json.loads(data)
 				response = doReserve(data)
@@ -438,6 +440,7 @@ def restock(data):
 def doReserve(data):
 
 	print "doreserve"
+	print data
 
 	city = data['city'].lower()
 	meal=data['meal']
@@ -446,14 +449,23 @@ def doReserve(data):
 	timestamp = data['timestamp']
 	clientID = data['clientID']
 
+	print city
+	print meal
+	print restaurant
+	print quantity
+	print timestamp
+	print clientID
+
 	print "aqui"
 
-	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()
+
+	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()	
 	
+	print itemID
 	if itemID == None:
 		return None
 	else:
-		return json.dumps({"itemID":2, "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
+		return json.dumps({"itemID":int(itemID[0]), "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
 
 
 
@@ -462,21 +474,21 @@ def doReserve(data):
 if __name__ == '__main__':
 	db.create_all()
 	#insert
-	r1 = Restaurant('restaurant 1', 'aveiro', 'dave1')
-	r2 = Restaurant('restaurant 2', 'aveiro', 'dave2')
-	r3 = Restaurant('restaurant 3', 'aveiro', 'dave3')
-	m1 = Meal('peixe',13)
-	m2 = Meal('Atum em lata',14)
-	men1 = Menu(1,1)
-	men2 = Menu(2,2)
-	db.session.add(r1)
-	db.session.add(r2)
-	db.session.add(r3)
-	db.session.add(m1)
-	db.session.add(m2)
-	db.session.add(men1)
-	db.session.add(men2)
-	db.session.commit()
+	#r1 = Restaurant('restaurant 1', 'aveiro', 'dave1')
+	#r2 = Restaurant('restaurant 2', 'aveiro', 'dave2')
+	#r3 = Restaurant('restaurant 3', 'aveiro', 'dave3')
+	#m1 = Meal('peixe',13)
+	#m2 = Meal('Atum em lata',14)
+	#men1 = Menu(1,1)
+	#men2 = Menu(2,2)
+	#db.session.add(r1)
+	#db.session.add(r2)
+	#db.session.add(r3)
+	#db.session.add(m1)
+	#db.session.add(m2)
+	#db.session.add(men1)
+	#db.session.add(men2)
+	#db.session.commit()
 
 	print "a enviar dados"
 	startSMSservice()
