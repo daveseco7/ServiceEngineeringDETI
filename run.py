@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template, url_for, session, redirect
 from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import relationship
 import datetime
 import sqlite3
 import sys
@@ -43,7 +44,9 @@ class Menu(db.Model):
 	__tablename__ = "menu"
 	menuID = db.Column(db.Integer, primary_key=True)
 	restaurantID = db.Column(db.Integer, db.ForeignKey("restaurant.restaurantID"))
+	restaurant = db.relationship(Restaurant)
 	mealID = db.Column(db.Integer, db.ForeignKey("meal.mealID"))
+	meal = db.relationship(Meal)
 
 	def __init__(self, restaurantID, mealID):
 		self.mealID = mealID
@@ -84,27 +87,18 @@ def replenishstock():
 	
 	#recebe
 	#{
-    #"info": [
-    #    {
-    #        "token": "asdasdasd",
-    #        "username": "dave1",
-    #        "providerID": 2
-    #    }
-    #],
-    #"menu": [
-    #    {
-    #        "itemID": 1,
-    #        "name": "arrozdecao",
-    #        "price": 12,
-    #        "quantity": 20
-    #    },
-    #    {
-    #        "itemID": 2,
-    #        "name": "arrozdegato",
-    #        "price": 10,
-    #        "quantity": 25
-    #    }
-    #]
+    	#"info": [
+        #{
+        #    "token": "eyJhbGciOiJIUzI1NiIsImV4cCI6MTQ0ODI5MTA0MSwiaWF0IjoxNDQ4MjkwNDQxfQ.eyJpZCI6MX0.4U65JMDg5g8wAsSFEzakGobxz_u6nn5oDH5WSwfGu_k"
+        #}
+    	#],
+    	#"menu": [
+        #{
+        #    "price": 15,
+        #    "name": "jd",
+        #    "quantity": 66
+        #}
+    	#]
 	#}
 
 
@@ -118,19 +112,23 @@ def replenishstock():
 	headers = {'Content-Type': 'application/json'}															#content type
 	r = requests.post(url, data=response, headers=headers) 														#efetua o request
 	response = json.loads(r.text)
+	
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+	data["info"][0]["username"] = response['username']
 
-	if  response["username"] !=  data["info"][0]["username"]:
-		return json.dumps({"404" : "Invalid Username!"})
+	data = restock(data)
+	print data
+	if data == None:
+		print "Manager not found"
+		return json.dumps({"200" : "MANAGER NOT FOUND"})
 	else:
-		data = restock(data)
-		if data == None:
-			return json.dumps({"404" : "Manager username not found"})
-		else:
-			#Enviar dados para REST do manel
-			url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
-			headers = {'Content-Type': 'application/json'}					#content type
-			r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
-			return json.dumps({"200" : "OK"})
+		#Enviar dados para REST do manel
+		url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
+		headers = {'Content-Type': 'application/json'}					#content type
+		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+		return json.dumps({"200" : "OK"})
 
 
 @app.route('/doreservation', methods=['POST'])
@@ -138,19 +136,20 @@ def doreservation():
 
 	#recebe
 	#{
-    #"username": "dave1",
-    #"city": "Aveiro",
-    #"restaurnt": "restaunrant1",
-    #"meal": "peixe",
-    #"quantity": "2",
-    #"hora": "1445556339"
-    #"token":"asdasd"
+    	#"city": "Aveiro",
+    	#"restaurant": "restaunrant1",
+    	#"meal": "peixe",
+    	#"quantity": "2",
+    	#"timestamp": "22/11/2015:18:00"
+    	#"token":"asdasd"
 	#}
-
-
+	
+	print "doreservation"
 	#recebe dados da reservation app do user
 	data =  request.get_data()
 	data =json.loads(data)
+
+	print data
 	
 	#Token check
 	response = json.dumps({"token": data["token"]})
@@ -159,16 +158,19 @@ def doreservation():
 	r = requests.post(url, data=response, headers=headers) 														#efetua o request
 	response = json.loads(r.text)
 
-	if  response["username"] !=  data["username"]:
-		return json.dumps({"404" : "Invalid Username!"})
+	if response["result"] == "error":
+                print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
 	else:
+		data["username"] = response['username']
 		time = int(datetime.datetime.strptime(data['timestamp'], '%d/%m/%Y:%H:%M').strftime("%s"))
-		data = json.dumps({"username":data["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":time, "clientID": response["user_id"]})
+		data= json.dumps({"username": response["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":time, "clientID": response["user_id"]})
 		data = json.loads(data)
 		data= doReserve(data)
 
 		if data == None:
-			return json.dumps({"404" : "Manager username not found"})
+			print "not found"
+			return json.dumps({"200" : "MANAGER NOT FOUND"})
 		else:
 
 			print data
@@ -181,10 +183,11 @@ def doreservation():
 
 	#envia
 	#{
+	#"username":dave,
 	#"itemID": 8,
 	#"quantity": 2,
 	#"clientID": 12,
-    #"timestamp": 1445556339
+    	#"timestamp": 1445556339
 	#}	
 
 
@@ -196,7 +199,7 @@ def getSMS():
 	data = json.loads(data)
 
 	sms = data['body']
-	number = str(data['senderAddress'])
+	number = data['senderAddress']
 	requestID = str(data['requestid'])
 
 	#verificar 
@@ -402,8 +405,9 @@ def setREGEXtoSMS():
 def getLocalidade(city):
 	city = city.lower()
 	restaurants = Restaurant.query.filter_by(localization=city).all()
-	menus = db.session.query(Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).all()
+	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).all()	
 	response = json.loads('{"Restaurants":  [ ]}')
+	
 	for rest in restaurants:
 		menu = []
 		for item in menus:
@@ -413,10 +417,11 @@ def getLocalidade(city):
 	return json.dumps(response)
 
 def restock(data):
-
+	
+	print "asdasdasd"
 	for info in data['info']:
 		username = info['username']
-	
+	print username
 	rest = Restaurant.query.filter_by(managerusername=username).first()
 	
 	#Guarda dados na base de dados do main service
@@ -427,20 +432,17 @@ def restock(data):
 		for item in menu:
 			meal = Meal(item['name'], item['price'])
 			mealID = db.session.query(Meal).count()
-			menu = Menu(rest.restaurantID, mealID)
+			menu = Menu(rest.restaurantID, mealID+1)
 			db.session.add(meal)
 			db.session.add(menu)
 			db.session.commit()
 			item['itemID'] = mealID
-
-		data['info'].append({"providerID":rest.restaurantID})
+		
+		data["info"][0]["providerID"] = rest.restaurantID
 		return data
 
 
 def doReserve(data):
-
-	print "doreserve"
-	print data
 
 	city = data['city'].lower()
 	meal=data['meal']
@@ -448,24 +450,14 @@ def doReserve(data):
 	quantity = data['quantity']
 	timestamp = data['timestamp']
 	clientID = data['clientID']
-
-	print city
-	print meal
-	print restaurant
-	print quantity
-	print timestamp
-	print clientID
-
-	print "aqui"
-
+	username = data['username']
 
 	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()	
 	
-	print itemID
 	if itemID == None:
 		return None
 	else:
-		return json.dumps({"itemID":int(itemID[0]), "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
+		return json.dumps({"username":username,"itemID":int(itemID[0]), "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
 
 
 
@@ -496,4 +488,4 @@ if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=80)
 
 
-
+JIUzI1NiIsImV4cCI6MTQ0ODMxNjQzOSwiaWF0IjoxNDQ4MzE1ODM5fQ.eyJpZCI6Nn0.ltpjGBcb10CTWJLXATY8O_1Cc2JQUp8OVle6nJsxv-8
