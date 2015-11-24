@@ -207,162 +207,142 @@ def getSMS():
 
 	if sms[2] == "city":
 		print "na city"
+
 		def proc1(localidade, requestID):
-			print "inside thread"
-			
+			print "inside thread 1"
+			response = ""
 			data = getLocalidade(localidade)
-			response = json.dumps({"body" : data , "status": 200})
+			data = json.loads(data)
+			for rest in data['Restaurants']:
+				response += "RESTAURANT: \"" + rest['Name'] + "\""
+				for menu in rest['Menu']:
+					response += " MENU: " + menu['item'] + " PRICE: " +  str(menu['price']) + " "
+				response += "\n"
+			response = json.dumps({"body" : response , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    			
 			headers = {'Content-Type': 'application/json'}								
 			r = requests.post(url, data=response, headers=headers)
+			print "end thread 1"
 			return json.dumps({"200" : "OK"})
 
 
 		t = Process(target=proc1, args=(sms[3], requestID))
-		print "antes de dar start"
 		t.start()
 		return json.dumps({"200" : "OK"})
 
 
 	elif sms[2] == 'add':
+		print "add"
 
-		#Username check
-		data = json.dumps({"phone":number})
-		url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
-		headers = {'Content-Type': 'application/json'}															#content type
-		r = requests.post(url, data=data, headers=headers) 														#efetua o request
-		response = json.loads(r.text)
+		def proc2(number, requestID, sms):
+			print "inside thread 2"
+			#Username check
+			response = json.dumps({"phone":number})
+			url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
+			headers = {'Content-Type': 'application/json'}															#content type
+			r = requests.post(url, data=response, headers=headers) 														#efetua o request
+			response = json.loads(r.text)
 
-		print response
-		print "ca fora"
+			if response['result'] == "error":
+				SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 200})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+				headers = {'Content-Type': 'application/json'}
+				r = requests.post(url, data=SMSresponse, headers=headers)
+				return json.dumps({"200" : "PHONE NUMBER NOT REGISTED"})
 
-		if response['result'] == "error":
+			username = response['username']
+			data = json.dumps({"info":[{"username": username}],"menu":[]})
+			data = json.loads(data)
 
-			print "ERROR IF 1"
+			i=4
+			while i <= len(sms)-3:
+				data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
+				i= i+3
 
-			SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 404})
-			url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-			headers = {'Content-Type': 'application/json'}																							#content type
-			r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
-			return json.dumps({"404" : "Number not registred"})
+			data = restock(data)
 
-		else:
+			if data == None:
+				SMSresponse = json.dumps({"body" : "Manager not found" , "status": 404})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"  
+				headers = {'Content-Type': 'application/json'}
+				r = requests.post(url, data=SMSresponse, headers=headers) 	
+				return json.dumps({"200" : "MANAGER NOT FOUND"})
 
-			print "asd"
-			print sms[3]
-			print response['username']
-
-
-			if  response['username'] != sms[3]:
-
-				print "ERROR IF 2"
-
-				SMSresponse = json.dumps({"body" : "Invalid Username!" , "status": 404})
-				url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-				headers = {'Content-Type': 'application/json'}																							#content type
-				r = requests.post(url, data=SMSresponse, headers=headers) 																					#efetua o request
-				return json.dumps({"404" : "Invalid Username!"})
-
-			else:
-				print "asdasdsa"
-
-				print "Tudo ok"
-
-
-				data = json.dumps({"info":[{"username": sms[3]}],"menu":[]})
-				data = json.loads(data)
-
-				i=5
-				while i <= len(sms)-3:
-					data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
-					i= i+3
-
-				print data
-				
-				data = restock(data)
-
-				print "depois"
-
-				print data
-				if data == None:
-
-					SMSresponse = json.dumps({"body" : "Manager not found" , "status": 404})
-					url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-					headers = {'Content-Type': 'application/json'}																							#content type
-					r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
-					return json.dumps({"404" : "Manager username not found"})
-
-				else:
-					print "sending"
-					#Enviar dados para REST do manel
-					url = "http://ogaviao.ddns.net:80/replenishstock"               						#URL DO MANEL
-					headers = {'Content-Type': 'application/json'}											#content type
-					r = requests.post(url, data=json.dumps(data), headers=headers) 							#efetua o request
+			print "sending"
+			#Enviar dados para REST do manel
+			url = "http://ogaviao.ddns.net:80/replenishstock"  
+			headers = {'Content-Type': 'application/json'}		
+			r = requests.post(url, data=json.dumps(data), headers=headers) 
 
 
-					SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
-					url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-					headers = {'Content-Type': 'application/json'}																							#content type
-					r = requests.post(url, data=SMSresponse, headers=headers) 																					#efetua o request
-					return json.dumps({"200" : "OK"})
+			SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
+			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    					
+			headers = {'Content-Type': 'application/json'}																
+			r = requests.post(url, data=SMSresponse, headers=headers)
+			print "end thread 2" 														
+			return json.dumps({"200" : "OK"})
 
+
+		t = Process(target=proc2, args=(number, requestID,sms))
+		t.start()
+		return json.dumps({"200" : "OK"})
 
 	elif sms[2] == 'reservation':
-		#1tapmeal#reservation#dave1#aveiro#restaurant 1#peixe#5#12:00
-			
-		#Username check
-		data = json.dumps({"phone":number})
-		url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
-		headers = {'Content-Type': 'application/json'}															#content type
-		r = requests.post(url, data=data, headers=headers) 														#efetua o request
-		response = json.loads(r.text)
-	
-		if response['result'] == "error":
-			SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 404})
-			url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-			headers = {'Content-Type': 'application/json'}																							#content type
-			r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
-			return json.dumps({"404" : "Number not registred"})
-		else:
-			if  response['username'] != sms[3]:
-				SMSresponse = json.dumps({"body" : "Invalid Username!" , "status": 404})
-				url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-				headers = {'Content-Type': 'application/json'}																							#content type
-				r = requests.post(url, data=SMSresponse, headers=headers) 																					#efetua o request
-				return json.dumps({"404" : "Invalid Username!"})
+		print "reservation"
 
-			else:
-				
-				time = int(datetime.datetime.strptime(sms[8], '%d/%m/%Y:%H:%M').strftime("%s")) 
-				print time
-				data = json.dumps({"username":sms[3],"city":sms[4],"restaurant":sms[5],"meal":sms[6],"quantity":sms[7],"timestamp":time, "clientID":response['user_id']})
-				data =json.loads(data)
-				response = doReserve(data)
+		def proc3(number, requestID,sms):
 
-				print response
+			print "inside thread 3"
+			#Username check
+			response = json.dumps({"phone":number})
+			url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
+			headers = {'Content-Type': 'application/json'}															#content type
+			r = requests.post(url, data=response, headers=headers) 														#efetua o request
+			response = json.loads(r.text)
 
-				if response == None:
-					SMSresponse = json.dumps({"body" : "Invalid items for reservation!" , "status": 404})
-					url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-					headers = {'Content-Type': 'application/json'}																							#content type
-					r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
-					return json.dumps({"404" : "Invalid items for reservation!"})			
+			if response['result'] == "error":
+				SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 200})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+				headers = {'Content-Type': 'application/json'}
+				r = requests.post(url, data=SMSresponse, headers=headers)
+				return json.dumps({"200" : "PHONE NUMBER NOT REGISTED"})
 
-				#Do a reservation
-				print "sending"
-				url = "http://ogaviao.ddns.net:80/doreservation"            	    		#URL DO MANEL
-				headers = {'Content-Type': 'application/json'}								#content type
-				r = requests.post(url, data=response, headers=headers) 	    				#efetua o request
+			username = response['username']
+			time = int(datetime.datetime.strptime(sms[6], '%d/%m/%Y:%H:%M').strftime("%s"))
+			data = json.dumps({"username":username,"city":sms[3],"restaurant":sms[4],"meal":sms[5],"quantity":sms[6],"timestamp":time, "clientID":response['user_id']})
+			data =json.loads(data)
+			response = doReserve(data)
+			print response
 
-				SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
-				url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    						#URL DO LUIS
-				headers = {'Content-Type': 'application/json'}																							#content type
-				r = requests.post(url, data=SMSresponse, headers=headers) 																				#efetua o request
-				return json.dumps({"200" : "OK"})
+			if response == None:
+				SMSresponse = json.dumps({"body" : "Invalid items for reservation!" , "status": 404})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+	 			headers = {'Content-Type': 'application/json'}	
+	 			r = requests.post(url, data=SMSresponse, headers=headers) 	
+	 			return json.dumps({"200" : "INVALID ITEMS FOR RESERVATION!"})			
+
+	 		#Do a reservation
+			print "sending"
+			url = "http://ogaviao.ddns.net:80/doreservation"            	    
+			headers = {'Content-Type': 'application/json'}							
+			r = requests.post(url, data=response, headers=headers) 	    
+
+			SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
+			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+			headers = {'Content-Type': 'application/json'}																			
+			r = requests.post(url, data=SMSresponse, headers=headers) 																		
+			return json.dumps({"200" : "OK"})
+
+
+		t = Process(target=proc3, args=(number, requestID,sms))
+		t.start()
+		return json.dumps({"200" : "OK"})
+
+
 	else:
 
 		SMSresponse = json.dumps({"body" : "Not acceptable!" , "status": 406})
-		url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    								#URL DO LUIS
+		url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
 		headers = {'Content-Type': 'application/json'}																									#content type
 		r = requests.post(url, data=SMSresponse, headers=headers) 																						#efetua o request
 		return json.dumps({"406" : "Not acceptable"})
@@ -427,7 +407,6 @@ def getLocalidade(city):
 
 def restock(data):
 	
-	print "asdasdasd"
 	for info in data['info']:
 		username = info['username']
 	print username
@@ -448,7 +427,6 @@ def restock(data):
 			item['itemID'] = mealID
 		
 		data["info"][0]["providerID"] = rest.restaurantID
-		return data
 
 
 def doReserve(data):
