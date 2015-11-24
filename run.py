@@ -6,6 +6,7 @@ import sqlite3
 import sys
 import json
 import requests
+from multiprocessing import Process
 
 app = Flask(__name__, template_folder='templates')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
@@ -167,18 +168,17 @@ def doreservation():
 		data= json.dumps({"username": response["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":time, "clientID": response["user_id"]})
 		data = json.loads(data)
 		data= doReserve(data)
-
+		data = json.loads(data)
 		if data == None:
 			print "not found"
 			return json.dumps({"200" : "MANAGER NOT FOUND"})
 		else:
-
-			print data
+			response = json.dumps(data)
 			#Enviar dados para REST do manel
 			url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
 			headers = {'Content-Type': 'application/json'}						#content type
-			r = requests.post(url, data=data, headers=headers) 	    #efetua o request
-			return json.dumps({"200" : "OK"})
+			r = requests.post(url, data=response, headers=headers) 	    #efetua o request
+			return json.dumps({"200" : "oK"})
 
 
 	#envia
@@ -206,12 +206,21 @@ def getSMS():
 	sms = sms.split('#')
 
 	if sms[2] == "city":
+		print "na city"
+		def proc1(localidade, requestID):
+			print "inside thread"
+			
+			data = getLocalidade(localidade)
+			response = json.dumps({"body" : data , "status": 200})
+			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    			
+			headers = {'Content-Type': 'application/json'}								
+			r = requests.post(url, data=response, headers=headers)
+			return json.dumps({"200" : "OK"})
 
-		data = getLocalidade(sms[3])
-		response = json.dumps({"body" : data , "status": 200})
-		url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    					#URL DO LUIS
-		headers = {'Content-Type': 'application/json'}																							#content type
-		r = requests.post(url, data=response, headers=headers) 																					#efetua o request
+
+		t = Process(target=proc1, args=(sms[3], requestID))
+		print "antes de dar start"
+		t.start()
 		return json.dumps({"200" : "OK"})
 
 
@@ -457,7 +466,7 @@ def doReserve(data):
 	if itemID == None:
 		return None
 	else:
-		return json.dumps({"username":username,"itemID":int(itemID[0]), "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
+		return json.dumps({"username":username,"itemID":int(itemID[0])-1, "quantity":int(quantity),"clientID":int(clientID), "timestamp": int(timestamp)})
 
 
 
@@ -483,8 +492,8 @@ if __name__ == '__main__':
 	#db.session.commit()
 
 	print "a enviar dados"
-	startSMSservice()
-	setREGEXtoSMS()
+	#startSMSservice()
+	#setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
 
