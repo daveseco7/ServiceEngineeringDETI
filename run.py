@@ -200,6 +200,7 @@ def getSMS():
 
 	sms = data['body']
 	number = data['senderAddress']
+	print number
 	requestID = str(data['requestid'])
 
 	#verificar 
@@ -256,26 +257,27 @@ def getSMS():
 
 			i=4
 			while i <= len(sms)-3:
-				data["menu"].append({"name": sms[i],"price": sms[i+1], "quantity": sms[i+2]})
+				data["menu"].append({"name": sms[i],"price": int(sms[i+1]), "quantity":int(sms[i+2])})
 				i= i+3
 
 			data = restock(data)
-
 			if data == None:
-				SMSresponse = json.dumps({"body" : "Manager not found" , "status": 404})
+				SMSresponse = json.dumps({"body" : "Manager not found" , "status": 200})
 				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"  
 				headers = {'Content-Type': 'application/json'}
 				r = requests.post(url, data=SMSresponse, headers=headers) 	
 				return json.dumps({"200" : "MANAGER NOT FOUND"})
 
 			print "sending"
+			response = data
+			print response
 			#Enviar dados para REST do manel
 			url = "http://ogaviao.ddns.net:80/replenishstock"  
 			headers = {'Content-Type': 'application/json'}		
-			r = requests.post(url, data=json.dumps(data), headers=headers) 
+			r = requests.post(url, data=response, headers=headers) 
 
 
-			SMSresponse = json.dumps({"body" : "Reservation done!" , "status": 200})
+			SMSresponse = json.dumps({"body" : "Menu added!" , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    					
 			headers = {'Content-Type': 'application/json'}																
 			r = requests.post(url, data=SMSresponse, headers=headers)
@@ -308,8 +310,9 @@ def getSMS():
 				return json.dumps({"200" : "PHONE NUMBER NOT REGISTED"})
 
 			username = response['username']
-			time = int(datetime.datetime.strptime(sms[6], '%d/%m/%Y:%H:%M').strftime("%s"))
-			data = json.dumps({"username":username,"city":sms[3],"restaurant":sms[4],"meal":sms[5],"quantity":sms[6],"timestamp":time, "clientID":response['user_id']})
+			
+			time = int(datetime.datetime.strptime(sms[7], '%d/%m/%Y:%H:%M').strftime("%s"))
+			data = json.dumps({"username":username,"city":sms[3],"restaurant":sms[4],"meal":sms[5],"quantity":int(sms[6]),"timestamp":time, "clientID":int(response['user_id'])})
 			data =json.loads(data)
 			response = doReserve(data)
 			print response
@@ -410,8 +413,7 @@ def restock(data):
 	for info in data['info']:
 		username = info['username']
 	print username
-	rest = Restaurant.query.filter_by(managerusername=username).first()
-	
+	rest = Restaurant.query.filter_by(managerusername=username).first()	
 	#Guarda dados na base de dados do main service
 	if rest == None :
 		return None
@@ -427,6 +429,7 @@ def restock(data):
 			item['itemID'] = mealID
 		
 		data["info"][0]["providerID"] = rest.restaurantID
+		return json.dumps(data)
 
 
 def doReserve(data):
@@ -440,7 +443,7 @@ def doReserve(data):
 	username = data['username']
 
 	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()	
-	
+	print itemID	
 	if itemID == None:
 		return None
 	else:
