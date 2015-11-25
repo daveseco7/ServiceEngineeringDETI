@@ -36,10 +36,17 @@ class Meal(db.Model):
 	mealID = db.Column(db.Integer, primary_key=True)
 	name = db.Column(db.String(50))
 	price = db.Column(db.Float)
+	date = db.Column(db.Integer)
+	meal = db.Column(db.String(50))
+	image = db.Column(db.String(250), nullable=True)
 
-	def __init__(self, name, price):
+
+	def __init__(self, name, price, date, meal,image):
 		self.name = name
 		self.price =  price
+		self.date = date
+		self.meal = meal
+		self.image = image
 
 class Menu(db.Model):
 	__tablename__ = "menu"
@@ -72,12 +79,46 @@ def auth_callback():
 		session['access_token'] = token
 	return redirect('/')
 
-
-@app.route('/localization/<path:path>', methods=['GET'])
-def Localidade(path):
+@app.route('/restaurants', methods=['POST'])
+def getRestaurants():
 	
+	#recebe dados da manager app
+	data =  request.get_data()
+	data = json.loads(data)
+
+	#Token check
+	response = json.dumps({"token": data["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"  
+	headers = {'Content-Type': 'application/json'}	
+	r = requests.post(url, data=response, headers=headers)
+	response = json.loads(r.text)
+	
+
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+
+	username = response["username"]
+	rest = Restaurant.query.filter_by(managerusername=username).all()
+
+	dic = {"restaurants" : []}
+	for i in rest:
+		dic["restaurants"].append({"name" : i.restaurantname, "id":i.restaurantID})
+
+	return json.dumps(dic)
+
+
+
+@app.route('/localization/<path:path>/<meal>', methods=['GET'])
+@app.route('/localization/<path:path>', methods=['GET'])
+def Localidade(path, meal=None):
+
 	if request.method == 'GET':
-		return getLocalidade(path)
+		if meal:
+			return getLocalidade(path, meal)
+		else:
+			return getLocalidade(path, None)
+
 	else:
 		return "Invalid request"
 
@@ -85,22 +126,26 @@ def Localidade(path):
 @app.route('/replenishstock', methods=['POST'])
 def replenishstock():
 
-	
 	#recebe
-	#{
-    	#"info": [
-        #{
-        #    "token": "eyJhbGciOiJIUzI1NiIsImV4cCI6MTQ0ODI5MTA0MSwiaWF0IjoxNDQ4MjkwNDQxfQ.eyJpZCI6MX0.4U65JMDg5g8wAsSFEzakGobxz_u6nn5oDH5WSwfGu_k"
-        #}
-    	#],
-    	#"menu": [
-        #{
-        #    "price": 15,
-        #    "name": "jd",
-        #    "quantity": 66
-        #}
-    	#]
-	#}
+	# {
+	#     "info": [
+	#         {
+	#             "token": "eyJpZCI6M30.9II7kKlKmIfoVmu4PatRT_pdrHJcDB8jvnF8ogWEOU4",
+	#             "providerID": 1
+	#         }
+	#     ],
+	#     "menu": [
+	#         {
+	#             "price": 15,
+	#             "name": "asd",
+	#             "quantity": 66,
+	#             "date": "26/11/2015",
+	#             "url": "",
+	# 			  "meal":"dinner"
+	#         }
+	#     ]
+	# }
+
 
 
 	#recebe dados da manager app
@@ -108,27 +153,30 @@ def replenishstock():
 	data = json.loads(data)
 
 	#Token check
-	response = json.dumps({"token": data["info"][0]["token"]})
-	url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
-	headers = {'Content-Type': 'application/json'}															#content type
-	r = requests.post(url, data=response, headers=headers) 														#efetua o request
+	response = json.dumps({"token": data["info"][0]["token"]})	
+	url = "http://idp.moreirahelder.com/api/getuser"            #URL DO HELDER
+	headers = {'Content-Type': 'application/json'}				#content type
+	r = requests.post(url, data=response, headers=headers) 		#efetua o request
 	response = json.loads(r.text)
 	
 	if response["result"] == "error":
 		print "invalid token"
 		return json.dumps({"200" : "INVALID TOKEN"})
+	
 	data["info"][0]["username"] = response['username']
+	for item in data["menu"]:
+		item["date"] = int(datetime.datetime.strptime(item["date"], '%d/%m/%Y').strftime("%s"))
 
 	data = restock(data)
 	print data
 	if data == None:
 		print "Manager not found"
-		return json.dumps({"200" : "MANAGER NOT FOUND"})
+		return json.dumps({"200" : "INVALID ARGUMENTS (DATE, RESTAURANT, MANAGER)"})
 	else:
 		#Enviar dados para REST do manel
-		url = "http://ogaviao.ddns.net:80/replenishstock"               #URL DO MANEL
-		headers = {'Content-Type': 'application/json'}					#content type
-		r = requests.post(url, data=json.dumps(data), headers=headers) 	#efetua o request
+		url = "http://ogaviao.ddns.net:80/replenishstock"               	#URL DO MANEL
+		headers = {'Content-Type': 'application/json'}						#content type
+		r = requests.post(url, data=data, headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
 
 
@@ -169,15 +217,17 @@ def doreservation():
 		data = json.loads(data)
 		data= doReserve(data)
 		data = json.loads(data)
+
 		if data == None:
 			print "not found"
-			return json.dumps({"200" : "MANAGER NOT FOUND"})
+			return json.dumps({"200" : "RESTAURANT NOT FOUND"})
+		
 		else:
 			response = json.dumps(data)
 			#Enviar dados para REST do manel
 			url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
 			headers = {'Content-Type': 'application/json'}						#content type
-			r = requests.post(url, data=response, headers=headers) 	    #efetua o request
+			r = requests.post(url, data=response, headers=headers) 	    		#efetua o request
 			return json.dumps({"200" : "oK"})
 
 
@@ -394,41 +444,77 @@ def setREGEXtoSMS():
 	r = requests.put(url, data=data, headers=headers) 																#efetua o request
 	print json.loads(data)
 
-def getLocalidade(city):
+def getLocalidade(city, meal):
+
 	city = city.lower()
 	restaurants = Restaurant.query.filter_by(localization=city).all()
-	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).all()	
+	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).all()	
 	response = json.loads('{"Restaurants":  [ ]}')
-	
-	for rest in restaurants:
-		menu = []
-		for item in menus:
-			if rest.restaurantID == item.restaurantID:
-				menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
-		response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
-	return json.dumps(response)
+
+	if meal:
+		if meal == "lunch":
+			for rest in restaurants:
+				menu = []
+				for item in menus:
+					if rest.restaurantID == item.restaurantID and item.meal == "lunch":
+						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+			return json.dumps(response)
+
+		elif meal == "dinner":
+			for rest in restaurants:
+				menu = []
+				for item in menus:
+					if rest.restaurantID == item.restaurantID and item.meal == "dinner":
+						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+			return json.dumps(response)
+
+		else:
+			return json.dumps({"200":"INVALID MEAL OPTION"})
+
+	else:
+		for rest in restaurants:
+			menu = []
+			for item in menus:
+				if rest.restaurantID == item.restaurantID:
+					print item.meal
+					menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+			response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+		return json.dumps(response)	
 
 def restock(data):
 	
 	for info in data['info']:
 		username = info['username']
-	print username
-	rest = Restaurant.query.filter_by(managerusername=username).first()	
+		providerID = info['providerID']
+
+	rest = Restaurant.query.filter_by(managerusername=username, restaurantID=providerID).first()	
+
 	#Guarda dados na base de dados do main service
-	if rest == None :
+	if rest == None:
 		return None
+
 	else:
+		url = None
 		menu = data['menu']
 		for item in menu:
-			meal = Meal(item['name'], item['price'])
+			print item['date']
+			print int(datetime.datetime.now().strftime("%s"))
+			if  int(item['date']) < int(datetime.datetime.now().strftime("%s")):
+				print "Menu expiration date invalid"
+				return None
+			if item['url']:
+				url = item['url']
+
+			meal = Meal(item['name'], item['price'], item['date'], item['meal'],url)
 			mealID = db.session.query(Meal).count()
 			menu = Menu(rest.restaurantID, mealID+1)
 			db.session.add(meal)
 			db.session.add(menu)
 			db.session.commit()
-			item['itemID'] = mealID
-		
-		data["info"][0]["providerID"] = rest.restaurantID
+			item['itemID'] = int(mealID)
+
 		return json.dumps(data)
 
 
@@ -473,9 +559,7 @@ if __name__ == '__main__':
 	#db.session.commit()
 
 	print "a enviar dados"
-	#startSMSservice()
-	#setREGEXtoSMS()
+	startSMSservice()
+	setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
-
-JIUzI1NiIsImV4cCI6MTQ0ODMxNjQzOSwiaWF0IjoxNDQ4MzE1ODM5fQ.eyJpZCI6Nn0.ltpjGBcb10CTWJLXATY8O_1Cc2JQUp8OVle6nJsxv-8
