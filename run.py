@@ -380,7 +380,7 @@ def getSMS():
 			SMSresponse = json.dumps({"body" : "Menu added!" , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    					
 			headers = {'Content-Type': 'application/json'}																
-			#r = requests.post(url, data=SMSresponse, headers=headers)
+			r = requests.post(url, data=SMSresponse, headers=headers)
 			print "end thread 2" 														
 			return json.dumps({"200" : "OK"})
 
