@@ -116,8 +116,7 @@ def Localidade(path, meal=None, date=None):
 
 	if request.method == 'GET':
 		if meal and date:
-			time = int(datetime.datetime.strptime(date, '%d-%m-%Y').strftime("%s"))
-			return getLocalidade(path, meal, time)
+			return getLocalidade(path, meal, date)
 		elif meal and not date:
 			return getLocalidade(path,meal,None)
 		else:
@@ -179,8 +178,8 @@ def replenishstock():
 	else:
 		#Enviar dados para REST do manel
 		url = "http://ogaviao.ddns.net:80/replenishstock"               	#URL DO MANEL
-		#headers = {'Content-Type': 'application/json'}						#content type
-		#r = requests.post(url, data=data, headers=headers) 	#efetua o request
+		headers = {'Content-Type': 'application/json'}						#content type
+		r = requests.post(url, data=data, headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
 
 
@@ -196,6 +195,10 @@ def doreservation():
     	#"timestamp": "22/11/2015:18:00"
     	#"token":"asdasd"
 	#}
+
+
+
+
 	
 	print "doreservation"
 	#recebe dados da reservation app do user
@@ -241,7 +244,7 @@ def doreservation():
 	#"itemID": 8,
 	#"quantity": 2,
 	#"clientID": 12,
-    	#"timestamp": 1445556339
+    #"timestamp": 1445556339
 	#}	
 
 
@@ -263,16 +266,28 @@ def getSMS():
 	if sms[2] == "city":
 		print "na city"
 
-		def proc1(localidade, requestID):
+		def proc1(localidade, requestID, meal=None, date=None):
 			print "inside thread 1"
 			response = ""
-			data = getLocalidade(localidade)
+
+			if meal and date:
+				print date
+				data = getLocalidade(localidade, meal,date)
+			if meal and not date:
+				data = getLocalidade(localidade, meal,None)
+				print data
+			if not meal and not date:
+				data = getLocalidade(localidade, None, None)
+
 			data = json.loads(data)
+			print data
+
 			for rest in data['Restaurants']:
 				response += "RESTAURANT: \"" + rest['Name'] + "\""
 				for menu in rest['Menu']:
-					response += " MENU: " + menu['item'] + " PRICE: " +  str(menu['price']) + " "
+					response += " MENU: " + menu['item'] + " PRICE: " +  str(menu['price']) + " MEAL: " + str(menu['meal']) + " DATE: " + datetime.datetime.fromtimestamp(int(menu['date'])).strftime('%d-%m-%Y')
 				response += "\n"
+
 			response = json.dumps({"body" : response , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    			
 			headers = {'Content-Type': 'application/json'}								
@@ -280,14 +295,20 @@ def getSMS():
 			print "end thread 1"
 			return json.dumps({"200" : "OK"})
 
+		if len(sms) == 5:
+			t = Process(target=proc1, args=(sms[3], requestID, sms[4], None))
+		elif len(sms) == 6:
+			t = Process(target=proc1, args=(sms[3], requestID, sms[4], sms[5]))
+		else:
+			t = Process(target=proc1, args=(sms[3], requestID, None, None))
 
-		t = Process(target=proc1, args=(sms[3], requestID))
 		t.start()
 		return json.dumps({"200" : "OK"})
 
-
 	elif sms[2] == 'add':
 		print "add"
+
+		#1tapmeal#add#menu#peixe#10#20#dinner#27-11-2015#carne#12#35#lunch#27-11-2015
 
 		def proc2(number, requestID, sms):
 			print "inside thread 2"
@@ -311,10 +332,12 @@ def getSMS():
 
 			i=4
 			while i <= len(sms)-3:
-				data["menu"].append({"name": sms[i],"price": int(sms[i+1]), "quantity":int(sms[i+2])})
-				i= i+3
+				data["menu"].append({"name": sms[i],"price": int(sms[i+1]), "quantity":int(sms[i+2]), "meal":sms[i+3], "date": sms[i+4]})
+				i= i+5
 
-			data = restock(data)
+			print data
+
+			#data = restock(data)
 			if data == None:
 				SMSresponse = json.dumps({"body" : "Manager not found" , "status": 200})
 				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"  
@@ -326,9 +349,9 @@ def getSMS():
 			response = data
 			print response
 			#Enviar dados para REST do manel
-			url = "http://ogaviao.ddns.net:80/replenishstock"  
-			headers = {'Content-Type': 'application/json'}		
-			r = requests.post(url, data=response, headers=headers) 
+			#url = "http://ogaviao.ddns.net:80/replenishstock"  
+			#headers = {'Content-Type': 'application/json'}		
+			#r = requests.post(url, data=response, headers=headers) 
 
 
 			SMSresponse = json.dumps({"body" : "Menu added!" , "status": 200})
@@ -450,7 +473,7 @@ def setREGEXtoSMS():
 
 def getLocalidade(city, meal, date):
 
-	currentTime = int(datetime.datetime.now().strftime("%s"))
+	currentTime = int(datetime.datetime.now().strftime("%s")) -24*60*60
 	city = city.lower()
 	restaurants = Restaurant.query.filter_by(localization=city).all()
 	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Meal.date, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).filter(Meal.date>currentTime).all()	
@@ -458,6 +481,9 @@ def getLocalidade(city, meal, date):
 
 
 	if date:
+		print date
+		date = int(datetime.datetime.strptime(date, '%d-%m-%Y').strftime("%s"))
+		print "depois da date"
 		if meal:
 			print "date and meal"
 			if meal == "lunch":
@@ -465,7 +491,7 @@ def getLocalidade(city, meal, date):
 					menu = []
 					for item in menus:
 						if rest.restaurantID == item.restaurantID and item.meal == "lunch" and item.date == int(date):
-							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":item.date})
 					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 				return json.dumps(response)
 
@@ -474,7 +500,7 @@ def getLocalidade(city, meal, date):
 					menu = []
 					for item in menus:
 						if rest.restaurantID == item.restaurantID and item.meal == "dinner"  and item.date == int(date):
-							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":item.date})
 					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 				return json.dumps(response)
 
@@ -488,7 +514,7 @@ def getLocalidade(city, meal, date):
 					menu = []
 					for item in menus:
 						if rest.restaurantID == item.restaurantID and item.meal == "lunch":
-							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":item.date})
 					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 				return json.dumps(response)
 
@@ -497,7 +523,7 @@ def getLocalidade(city, meal, date):
 					menu = []
 					for item in menus:
 						if rest.restaurantID == item.restaurantID and item.meal == "dinner":
-							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":item.date})
 					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 				return json.dumps(response)
 
@@ -509,7 +535,7 @@ def getLocalidade(city, meal, date):
 				menu = []
 				for item in menus:
 					if rest.restaurantID == item.restaurantID:
-						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":item.date})
 				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
 			return json.dumps(response)	
 
@@ -529,9 +555,9 @@ def restock(data):
 		url = None
 		menu = data['menu']
 		for item in menu:
-			#if  int(item['date']) < int(datetime.datetime.now().strftime("%s")):
-			#	print "Menu expiration date invalid"
-			#	return None
+			if  int(item['date']) < (int(datetime.datetime.now().strftime("%s")) - 24*60*60):
+				print "Menu expiration date invalid"
+				return None
 			if item['url']:
 				url = item['url']
 
