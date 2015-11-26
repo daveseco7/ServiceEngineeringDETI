@@ -108,6 +108,26 @@ def getRestaurants():
 	return json.dumps(dic)
 
 
+@app.route('/getMenus', methods=['POST'])
+def getMenus():
+
+	data =  request.get_data()
+	data = json.loads(data)
+
+	dateString = data["date"]
+
+	data["date"] = int(datetime.datetime.strptime(data["date"], '%d/%m/%Y').strftime("%s"))
+	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Meal.date, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).filter(Restaurant.restaurantID == int(data["restaurantID"])).filter(Meal.date == data["date"]).all()	
+
+	response = {}
+	menu = []
+	for item in menus:
+		menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString})
+
+	response["Menus"] = menu
+	return json.dumps(response)
+
+
 @app.route('/addRestaurant', methods=['POST'])
 def addRestaurant():
 	#recebe dados da manager app
