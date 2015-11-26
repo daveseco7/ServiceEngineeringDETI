@@ -208,24 +208,20 @@ def replenishstock():
 def doreservation():
 
 	#recebe
-	#{
-    	#"city": "Aveiro",
-    	#"restaurant": "restaunrant1",
-    	#"meal": "peixe",
-    	#"quantity": "2",
-    	#"timestamp": "22/11/2015:18:00"
-    	#"token":"asdasd"
-	#}
+	# {
+ 	#    	"city": "aveiro",
+ 	#    	"restaurant": "NomeDoRestaurante",
+ 	#    	"meal": "pratodeteste",
+ 	#    	"quantity": "1",
+ 	#    	"timestamp": "27/11/2015:18:00",
+ 	#    	"token":"joxNDQ4NTU3MjY0fQ.eyJpZCI6OX0.7KceZlUzkvRpOg-eQE23hj9IButnULTnQ07wVHr4H8Q"
+	# }
 
-
-	
 	print "doreservation"
 	#recebe dados da reservation app do user
-	data =  request.get_data()
-	data =json.loads(data)
+	data = request.get_data()
+	data = json.loads(data)
 
-	print data
-	
 	#Token check
 	response = json.dumps({"token": data["token"]})
 	url = "http://idp.moreirahelder.com/api/getuser"            								#URL DO HELDER
@@ -242,18 +238,20 @@ def doreservation():
 		data= json.dumps({"username": response["username"], "city": data["city"],"restaurant":data["restaurant"],"meal":data["meal"],"quantity":data["quantity"],"timestamp":time, "clientID": response["user_id"]})
 		data = json.loads(data)
 		data= doReserve(data)
-		data = json.loads(data)
 
 		if data == None:
 			print "not found"
-			return json.dumps({"200" : "RESTAURANT NOT FOUND"})
+			return json.dumps({"200" : "INVALID ARGUMENTS (DATE, RESTAURANT, MANAGER)"})
 		
 		else:
-			response = json.dumps(data)
+			print data
+			response = json.loads(data)
+			response = json.dumps(response)
+
 			#Enviar dados para REST do manel
 			url = "http://ogaviao.ddns.net:80/doreservation"            	    #URL DO MANEL
 			headers = {'Content-Type': 'application/json'}						#content type
-			r = requests.post(url, data=response, headers=headers) 	    		#efetua o request
+			r = requests.post(url, data=response, headers=headers) 	    	#efetua o request
 			return json.dumps({"200" : "oK"})
 
 
@@ -415,7 +413,6 @@ def getSMS():
 			data = json.dumps({"username":username,"city":sms[3],"restaurant":sms[4],"meal":sms[5],"quantity":int(sms[6]),"timestamp":time, "clientID":int(response['user_id'])})
 			data =json.loads(data)
 			response = doReserve(data)
-			print response
 
 			if response == None:
 				SMSresponse = json.dumps({"body" : "Invalid items for reservation!" , "status": 404})
@@ -604,6 +601,10 @@ def doReserve(data):
 	timestamp = data['timestamp']
 	clientID = data['clientID']
 	username = data['username']
+
+	if  int(timestamp) < (int(datetime.datetime.now().strftime("%s")) - 24*60*60):
+		print "Menu expiration date invalid"
+		return None
 
 	itemID = db.session.query( Meal.mealID ).select_from(Meal).filter_by(name=meal).join(Menu).join(Restaurant).filter_by(localization=city).filter_by(restaurantname=restaurant).first()	
 	print itemID	
