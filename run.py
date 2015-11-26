@@ -108,6 +108,27 @@ def getRestaurants():
 	return json.dumps(dic)
 
 
+@app.route('/addRestaurant', methods=['POST'])
+def addRestaurant():
+	#recebe dados da manager app
+	data =  request.get_data()
+	data = json.loads(data)
+
+	#Token check
+	response = json.dumps({"token": data["token"]})	
+	url = "http://idp.moreirahelder.com/api/getuser"            #URL DO HELDER
+	headers = {'Content-Type': 'application/json'}				#content type
+	r = requests.post(url, data=response, headers=headers) 		#efetua o request
+	response = json.loads(r.text)
+	
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+
+	rest = Restaurant(data['name'], data['localization'], response["username"])
+	db.session.add(rest)
+	db.session.commit()
+	return json.dumps({"200" : "RESTAURANT ADDED"})
 
 @app.route('/localization/<path:path>/<meal>/<date>', methods=['GET']) 
 @app.route('/localization/<path:path>/<meal>', methods=['GET'])
@@ -197,8 +218,6 @@ def doreservation():
 	#}
 
 
-
-
 	
 	print "doreservation"
 	#recebe dados da reservation app do user
@@ -209,9 +228,9 @@ def doreservation():
 	
 	#Token check
 	response = json.dumps({"token": data["token"]})
-	url = "http://idp.moreirahelder.com/api/getuser"            											#URL DO HELDER
-	headers = {'Content-Type': 'application/json'}															#content type
-	r = requests.post(url, data=response, headers=headers) 														#efetua o request
+	url = "http://idp.moreirahelder.com/api/getuser"            								#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}												#content type
+	r = requests.post(url, data=response, headers=headers) 										#efetua o request
 	response = json.loads(r.text)
 
 	if response["result"] == "error":
@@ -307,8 +326,11 @@ def getSMS():
 
 	elif sms[2] == 'add':
 		print "add"
-
-		#1tapmeal#add#menu#peixe#10#20#dinner#27-11-2015#carne#12#35#lunch#27-11-2015
+		#{
+		#"body":"#1tapmeal#add#menu#peixe#10#20#dinner#27-11-2015#carne#12#35#lunch#27-11-2015",
+		#"senderAddress":"111111111",
+		#"requestid":50
+		#}
 
 		def proc2(number, requestID, sms):
 			print "inside thread 2"
@@ -332,12 +354,13 @@ def getSMS():
 
 			i=4
 			while i <= len(sms)-3:
-				data["menu"].append({"name": sms[i],"price": int(sms[i+1]), "quantity":int(sms[i+2]), "meal":sms[i+3], "date": sms[i+4]})
+				data["menu"].append({"name": sms[i],"price": int(sms[i+1]), "quantity":int(sms[i+2]), "meal":sms[i+3], "url" : None, "date": int(datetime.datetime.strptime(sms[i+4], '%d-%m-%Y').strftime("%s"))})
 				i= i+5
 
-			print data
+			rest = Restaurant.query.filter_by(managerusername=username).first()
+			data["info"][0]["providerID"] = int(rest.restaurantID)
 
-			#data = restock(data)
+			data = restock(data)
 			if data == None:
 				SMSresponse = json.dumps({"body" : "Manager not found" , "status": 200})
 				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"  
@@ -349,15 +372,15 @@ def getSMS():
 			response = data
 			print response
 			#Enviar dados para REST do manel
-			#url = "http://ogaviao.ddns.net:80/replenishstock"  
-			#headers = {'Content-Type': 'application/json'}		
-			#r = requests.post(url, data=response, headers=headers) 
+			url = "http://ogaviao.ddns.net:80/replenishstock"  
+			headers = {'Content-Type': 'application/json'}		
+			r = requests.post(url, data=response, headers=headers) 
 
 
 			SMSresponse = json.dumps({"body" : "Menu added!" , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    					
 			headers = {'Content-Type': 'application/json'}																
-			r = requests.post(url, data=SMSresponse, headers=headers)
+			#r = requests.post(url, data=SMSresponse, headers=headers)
 			print "end thread 2" 														
 			return json.dumps({"200" : "OK"})
 
