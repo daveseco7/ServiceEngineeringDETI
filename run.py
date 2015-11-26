@@ -109,15 +109,19 @@ def getRestaurants():
 
 
 
+@app.route('/localization/<path:path>/<meal>/<date>', methods=['GET']) 
 @app.route('/localization/<path:path>/<meal>', methods=['GET'])
 @app.route('/localization/<path:path>', methods=['GET'])
-def Localidade(path, meal=None):
+def Localidade(path, meal=None, date=None):
 
 	if request.method == 'GET':
-		if meal:
-			return getLocalidade(path, meal)
+		if meal and date:
+			time = int(datetime.datetime.strptime(date, '%d-%m-%Y').strftime("%s"))
+			return getLocalidade(path, meal, time)
+		elif meal and not date:
+			return getLocalidade(path,meal,None)
 		else:
-			return getLocalidade(path, None)
+			return getLocalidade(path, None, None)
 
 	else:
 		return "Invalid request"
@@ -175,8 +179,8 @@ def replenishstock():
 	else:
 		#Enviar dados para REST do manel
 		url = "http://ogaviao.ddns.net:80/replenishstock"               	#URL DO MANEL
-		headers = {'Content-Type': 'application/json'}						#content type
-		r = requests.post(url, data=data, headers=headers) 	#efetua o request
+		#headers = {'Content-Type': 'application/json'}						#content type
+		#r = requests.post(url, data=data, headers=headers) 	#efetua o request
 		return json.dumps({"200" : "OK"})
 
 
@@ -444,44 +448,70 @@ def setREGEXtoSMS():
 	r = requests.put(url, data=data, headers=headers) 																#efetua o request
 	print json.loads(data)
 
-def getLocalidade(city, meal):
+def getLocalidade(city, meal, date):
 
+	currentTime = int(datetime.datetime.now().strftime("%s"))
 	city = city.lower()
 	restaurants = Restaurant.query.filter_by(localization=city).all()
-	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).all()	
+	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Meal.date, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).filter(Meal.date>currentTime).all()	
 	response = json.loads('{"Restaurants":  [ ]}')
 
-	if meal:
-		if meal == "lunch":
-			for rest in restaurants:
-				menu = []
-				for item in menus:
-					if rest.restaurantID == item.restaurantID and item.meal == "lunch":
-						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
-				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
-			return json.dumps(response)
 
-		elif meal == "dinner":
-			for rest in restaurants:
-				menu = []
-				for item in menus:
-					if rest.restaurantID == item.restaurantID and item.meal == "dinner":
-						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
-				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
-			return json.dumps(response)
+	if date:
+		if meal:
+			print "date and meal"
+			if meal == "lunch":
+				for rest in restaurants:
+					menu = []
+					for item in menus:
+						if rest.restaurantID == item.restaurantID and item.meal == "lunch" and item.date == int(date):
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+				return json.dumps(response)
 
-		else:
-			return json.dumps({"200":"INVALID MEAL OPTION"})
+			elif meal == "dinner":
+				for rest in restaurants:
+					menu = []
+					for item in menus:
+						if rest.restaurantID == item.restaurantID and item.meal == "dinner"  and item.date == int(date):
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+				return json.dumps(response)
 
+			else:
+				return json.dumps({"200":"INVALID MEAL OPTION"})
 	else:
-		for rest in restaurants:
-			menu = []
-			for item in menus:
-				if rest.restaurantID == item.restaurantID:
-					print item.meal
-					menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
-			response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
-		return json.dumps(response)	
+		if meal:
+			print "no date but meal"
+			if meal == "lunch":
+				for rest in restaurants:
+					menu = []
+					for item in menus:
+						if rest.restaurantID == item.restaurantID and item.meal == "lunch":
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+				return json.dumps(response)
+
+			elif meal == "dinner":
+				for rest in restaurants:
+					menu = []
+					for item in menus:
+						if rest.restaurantID == item.restaurantID and item.meal == "dinner":
+							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+				return json.dumps(response)
+
+			else:
+				return json.dumps({"200":"INVALID MEAL OPTION"})
+		else:
+			print "localization"
+			for rest in restaurants:
+				menu = []
+				for item in menus:
+					if rest.restaurantID == item.restaurantID:
+						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID})
+				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+			return json.dumps(response)	
 
 def restock(data):
 	
@@ -499,11 +529,9 @@ def restock(data):
 		url = None
 		menu = data['menu']
 		for item in menu:
-			print item['date']
-			print int(datetime.datetime.now().strftime("%s"))
-			if  int(item['date']) < int(datetime.datetime.now().strftime("%s")):
-				print "Menu expiration date invalid"
-				return None
+			#if  int(item['date']) < int(datetime.datetime.now().strftime("%s")):
+			#	print "Menu expiration date invalid"
+			#	return None
 			if item['url']:
 				url = item['url']
 
@@ -559,7 +587,7 @@ if __name__ == '__main__':
 	#db.session.commit()
 
 	print "a enviar dados"
-	startSMSservice()
-	setREGEXtoSMS()
+	#startSMSservice()
+	#setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
