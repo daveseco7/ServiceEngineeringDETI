@@ -108,6 +108,27 @@ def getRestaurants():
 	return json.dumps(dic)
 
 
+
+@app.route('/getReservations/<restaurantID>', methods=['GET'])
+def reservs(restaurantID):
+	
+	#Enviar dados para REST do manel
+	url = "http://ogaviao.ddns.net:80/reservationsnumber/"+restaurantID 	#URL DO MANEL
+	r = requests.get(url) 	    											#efetua o request
+	data = json.loads(r.text)
+	
+	response = {}
+	menu = []
+	for item in data["reservated"]:
+		info = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).all()
+		for i in info:
+			menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image})
+	
+	response["Menus"] = menu
+	return json.dumps(response)
+
+
+
 @app.route('/getMenus', methods=['POST'])
 def getMenus():
 
