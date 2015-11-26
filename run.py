@@ -120,9 +120,10 @@ def reservs(restaurantID):
 	response = {}
 	menu = []
 	for item in data["reservated"]:
+		print item
 		info = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).all()
 		for i in info:
-			menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image})
+			menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image,"reserved":item["quantity"]})
 	
 	response["Menus"] = menu
 	return json.dumps(response)
