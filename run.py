@@ -129,6 +129,28 @@ def reservs(restaurantID):
 	return json.dumps(response)
 
 
+@app.route('/getReservationsByDate', methods=['POST'])
+def reservsDate():
+
+	data =  request.get_data()
+	data = json.loads(data)
+
+	response = json.dumps({"date":data["date"]})
+	url = "http://ogaviao.ddns.net:80/dayreserv/"+ str(data["restaurantID"]) 	#URL DO MANEL
+	headers = {'Content-Type': 'application/json'}								#content type
+	r = requests.post(url, data=response, headers=headers) 						#efetua o request
+	data = json.loads(r.text)
+
+	response = {}
+	menu = []
+	for item in data["reservated"]:
+		info = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).all()
+		for i in info:
+			menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image,"reserved":item["quantity"]})
+	
+	response["Menus"] = menu
+	return json.dumps(response)
+
 
 @app.route('/getMenus', methods=['POST'])
 def getMenus():
@@ -480,6 +502,45 @@ def getSMS():
 		t.start()
 		return json.dumps({"200" : "OK"})
 
+	elif sms[2] == 'reservations':
+		def proc4(number, requestID):
+			print "help"
+			help = ""
+			SMSresponse = json.dumps({"body" : help , "status": 200})
+			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+			headers = {'Content-Type': 'application/json'}																			
+			r = requests.post(url, data=SMSresponse, headers=headers) 																		
+			return json.dumps({"200" : "OK"})	
+
+
+		
+
+
+
+		if sms[3] == '':
+			print ""
+
+		elif sms[3] == '':
+			print ""
+
+		t = Process(target=proc4, args=(number, requestID))
+		t.start()
+		return json.dumps({"200" : "OK"})
+	
+	elif sms[2] == 'help':
+		def proc5(number, requestID):
+			print "help"
+			help = ""
+			SMSresponse = json.dumps({"body" : help , "status": 200})
+			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+			headers = {'Content-Type': 'application/json'}																			
+			r = requests.post(url, data=SMSresponse, headers=headers) 																		
+			return json.dumps({"200" : "OK"})		
+
+
+		t = Process(target=proc5, args=(number, requestID))
+		t.start()
+		return json.dumps({"200" : "OK"})
 
 	else:
 
