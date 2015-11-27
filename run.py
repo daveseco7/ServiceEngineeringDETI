@@ -38,7 +38,7 @@ class Meal(db.Model):
 	price = db.Column(db.Float)
 	date = db.Column(db.Integer)
 	meal = db.Column(db.String(50))
-	image = db.Column(db.String(250), nullable=True)
+	image = db.Column(db.String(), nullable=True)
 
 
 	def __init__(self, name, price, date, meal,image):
@@ -139,17 +139,19 @@ def reservsDate():
 	r = requests.post(url, data=response, headers=headers) 						#efetua o request
 	data = json.loads(r.text)
 
+	print data
+
 	response = {}
 	menu = []
 	for item in data["reservated"]:
 		i = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).first()
 		reservs = []
 		for reserv in item["reservations"]:
-			reservs.append({"username": reserv["username"], "reserved_quantity":reserv["quantity"]})
+			dateString = datetime.datetime.fromtimestamp(int(reserv["timestamp"])).strftime('%d/%m/%Y %H:%M')
+			reservs.append({"username": reserv["username"], "reserved_quantity":reserv["quantity"], "reservation_date": dateString})
 		menu.append({ "item" : i.name, "price": i.price, "itemID": int(i.mealID)-1, "meal": i.meal, "date":i.date, "url" : i.image, "reservations":reservs})
 	
 	response["Menus"] = menu
-	print json.dumps(response)
 	return json.dumps(response)
 
 
@@ -162,12 +164,12 @@ def getMenus():
 	dateString = data["date"]
 
 	data["date"] = int(datetime.datetime.strptime(data["date"], '%d/%m/%Y').strftime("%s"))
-	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Meal.date, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).filter(Restaurant.restaurantID == int(data["restaurantID"])).filter(Meal.date == data["date"]).all()	
+	menus = db.session.query( Meal.name, Meal.price, Meal.mealID, Meal.meal, Meal.date, Meal.image, Menu.restaurantID).select_from(Meal).join(Menu).join(Restaurant).filter(Restaurant.restaurantID == int(data["restaurantID"])).filter(Meal.date == data["date"]).all()	
 
 	response = {}
 	menu = []
 	for item in menus:
-		menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString})
+		menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url": item.image})
 
 	response["Menus"] = menu
 	return json.dumps(response)
