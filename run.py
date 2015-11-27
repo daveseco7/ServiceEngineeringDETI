@@ -108,7 +108,6 @@ def getRestaurants():
 	return json.dumps(dic)
 
 
-
 @app.route('/getReservations/<restaurantID>', methods=['GET'])
 def reservs(restaurantID):
 	
@@ -120,7 +119,6 @@ def reservs(restaurantID):
 	response = {}
 	menu = []
 	for item in data["reservated"]:
-		print item
 		info = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).all()
 		for i in info:
 			menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image,"reserved":item["quantity"]})
@@ -144,11 +142,14 @@ def reservsDate():
 	response = {}
 	menu = []
 	for item in data["reservated"]:
-		info = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).all()
-		for i in info:
-			menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image,"reserved":item["quantity"]})
+		i = Meal.query.filter((Meal.mealID-1) == int(item["itemID"])).first()
+		reservs = []
+		for reserv in item["reservations"]:
+			reservs.append({"username": reserv["username"], "reserved_quantity":reserv["quantity"]})
+		menu.append({ "item" : i.name, "price": i.price, "itemID": int(i.mealID)-1, "meal": i.meal, "date":i.date, "url" : i.image, "reservations":reservs})
 	
 	response["Menus"] = menu
+	print json.dumps(response)
 	return json.dumps(response)
 
 
@@ -338,7 +339,6 @@ def getSMS():
 
 	sms = data['body']
 	number = data['senderAddress']
-	print number
 	requestID = str(data['requestid'])
 
 	#verificar 
@@ -502,39 +502,118 @@ def getSMS():
 		t.start()
 		return json.dumps({"200" : "OK"})
 
-	elif sms[2] == 'reservations':
-		def proc4(number, requestID):
-			print "help"
-			help = ""
-			SMSresponse = json.dumps({"body" : help , "status": 200})
-			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
-			headers = {'Content-Type': 'application/json'}																			
-			r = requests.post(url, data=SMSresponse, headers=headers) 																		
-			return json.dumps({"200" : "OK"})	
+	elif sms[2] == 'list':
+		def proc4(number, requestID, date=None):
+			print "inside thread 4"
+
+			response = json.dumps({"phone":number})
+			url = "http://idp.moreirahelder.com/api/getuser"            			#URL DO HELDER
+			headers = {'Content-Type': 'application/json'}							#content type
+			r = requests.post(url, data=response, headers=headers) 					#efetua o request
+			response = json.loads(r.text)
+
+			if response['result'] == "error":
+				SMSresponse = json.dumps({"body" : "Number not registred!" , "status": 200})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+				headers = {'Content-Type': 'application/json'}
+				r = requests.post(url, data=SMSresponse, headers=headers)
+				return json.dumps({"200" : "PHONE NUMBER NOT REGISTED"})
+
+			username = response['username']
 
 
+
+			if date:
+				info = Restaurant.query.filter(Restaurant.managerusername ==username).first()
+				if info.restaurantID == None:
+					print "MANAGER NOT FOUND"
+					SMSresponse = json.dumps({"body" : "Manager not found" , "status": 200})
+					url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"  
+					headers = {'Content-Type': 'application/json'}
+					r = requests.post(url, data=SMSresponse, headers=headers) 	
+					return json.dumps({"200" : "MANAGER NOT FOUND"})
+
+
+				response = json.dumps({"restaurantID":info.restaurantID,"date":sms[4]})
+				url = "http://46.101.14.39/getReservationsByDate" 							#URL DO MANEL
+				headers = {'Content-Type': 'application/json'}								#content type
+				r = requests.post(url, data=response, headers=headers) 						#efetua o request
+				
+				data = json.loads(r.text)
+				response = ""
+				for item in data["Menus"]:
+					response += "Meal: " + item["item"]
+					for resev in item["reservations"]:
+						response += " User: " + resev["username"] + " Quantity: " + str(resev["reserved_quantity"])
+					response += "\n" 
+
+				if response == "":
+					response = "No reservations avaiable"
+
+				SMSresponse = json.dumps({"body" : response , "status": 200})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+				headers = {'Content-Type': 'application/json'}																			
+				r = requests.post(url, data=SMSresponse, headers=headers)
+				print "end thread 4" 																		
+				return json.dumps({"200" : "OK"})	
+
+
+
+			else:
+				print "no date"
+				info = Restaurant.query.filter(Restaurant.managerusername == username).first()
+				if info.restaurantID == None:
+					print "MANAGER NOT FOUND"
+					SMSresponse = json.dumps({"body" : "Manager not found" , "status": 200})
+					url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"  
+					headers = {'Content-Type': 'application/json'}
+					r = requests.post(url, data=SMSresponse, headers=headers) 	
+					return json.dumps({"200" : "MANAGER NOT FOUND"})
+					
+
+				url = "http://46.101.14.39/getReservations/" + str(info.restaurantID)
+				r = requests.get(url)
+
+				menus = json.loads(r.text)
+				response = ""
+				for item in menus["Menus"]:
+					response += "Meal: " + item["item"] + " reserved: " + str(item["reserved"]) + "\n"
+
+
+				if response == "":
+					response = "No reservations avaiable"
+				SMSresponse = json.dumps({"body" : response , "status": 200})
+				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
+				headers = {'Content-Type': 'application/json'}																			
+				r = requests.post(url, data=SMSresponse, headers=headers)
+				print "end thread 4" 																		
+				return json.dumps({"200" : "OK"})	
 		
 
+		if len(sms) > 4:
+			t = Process(target=proc4, args=(number, requestID, sms[4]))
+
+		else:
+			t = Process(target=proc4, args=(number, requestID, None))
 
 
-		if sms[3] == '':
-			print ""
-
-		elif sms[3] == '':
-			print ""
-
-		t = Process(target=proc4, args=(number, requestID))
 		t.start()
 		return json.dumps({"200" : "OK"})
 	
 	elif sms[2] == 'help':
 		def proc5(number, requestID):
-			print "help"
-			help = ""
+			print "inside thread 5"
+			help = "To get avaiable restaurants and menus type: #1tapmeal#city#<CITYNAME>\n \
+					To add a meal to your menu type: #1tapmeal#add#menu#<MEALNAME>#<PRICE>#<QUANTITY>#<MEALTYPE>#<DATE DD/MM/YYYY> \n \
+					To make a reservation type: #1tapmeal#reservation#<CITY>#<RESTAURANT>#<MEALNAME>#<QUANTITY>#<DATE DD/MM/YYYY:HH:MM> \n \
+					To list all valid reservations type: #1tapmeal#list \
+					To list all valid reservations for a certain day type: #1tapmeal#list#date#<DATE DD/MM/YYYY> "
+
 			SMSresponse = json.dumps({"body" : help , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
 			headers = {'Content-Type': 'application/json'}																			
-			r = requests.post(url, data=SMSresponse, headers=headers) 																		
+			r = requests.post(url, data=SMSresponse, headers=headers)
+			print "end thread 5" 																		
 			return json.dumps({"200" : "OK"})		
 
 
