@@ -137,7 +137,7 @@ def setReview():
 		rest = Restaurant.query.filter_by(restaurantID = data["restaurantID"]).first()
 	 	rest.classification = float(result[0])
 	 	db.session.commit()
-	 	return json.dumps({"200" : "VALID VOTE"})
+	 	return json.dumps({"classification" : float(result[0])})
 
 
 
