@@ -119,12 +119,12 @@ def getReservations():
 		r = requests.get(url) 										#efetua o request
 		data = json.loads(r.text)
 
-		currentTime = int(datetime.datetime.now().strftime("%s")) -24*60*60
 
+		currentTime = int(datetime.datetime.now().strftime("%s")) -24*60*60
 		response = {}
 		menu = []
 		for reserv in data["reservations"]:
-			if 	currentTime < int(reserv["timestamp"]):
+			if 	currentTime <= int(reserv["timestamp"]):
 				info = Meal.query.filter((Meal.mealID-1) == int(reserv["itemID"])).all()
 				for i in info:
 					dateString = datetime.datetime.fromtimestamp(int(reserv["timestamp"])).strftime('%d/%m/%Y %H:%M')
@@ -144,8 +144,11 @@ def setReview():
 	#"token":"asdasdads"
 	#}
 
+
 	data = request.get_data()
 	data = json.loads(data)
+
+	print data
 
 	#Token check
 	response = json.dumps({"token": data["token"]})
@@ -163,9 +166,8 @@ def setReview():
 
 	history = Reviews.query.filter_by(userID=user_id, restaurantID = data["restaurantID"]).first()
 
-	if history != []:
-		print "a actualizar"
-		print int(data["review"])
+
+	if history != None:
 		history.review = int(data["review"])
 		db.session.commit()
 
@@ -417,7 +419,7 @@ def doreservation():
 		if response == "200 Invalid stock":
 			return json.dumps({"200" : "INVALID STOCK"})
 		print response
-		return json.dumps({"200" : "oK"})
+		return json.dumps({"200" : "OK"})
 
 
 	#envia
