@@ -123,21 +123,22 @@ def setReview():
 		username = response['username']
 		user_id = response['user_id']
 
-	history = Reviews.query.filter_by(userID=user_id).all()
+	history = Reviews.query.filter_by(userID=user_id, restaurantID = data["restaurantID"]).first()
 
 	if history != []:
-		print "USER ALREADY VOTED FOR THIS RESTAURANT"
-		return json.dumps({"200" : "USER ALREADY VOTED"})
+		history.review = int(data["review"])
+		db.session.commit()
+
 	else:
 		review = Reviews(data["restaurantID"], user_id, data["review"])
 		db.session.add(review)
 		db.session.commit()
 
-		result = db.session.query(func.avg(Reviews.review)).first()
-		rest = Restaurant.query.filter_by(restaurantID = data["restaurantID"]).first()
-	 	rest.classification = float(result[0])
-	 	db.session.commit()
-	 	return json.dumps({"classification" : float(result[0])})
+	result = db.session.query(func.avg(Reviews.review)).first()
+	rest = Restaurant.query.filter_by(restaurantID = data["restaurantID"]).first()
+	rest.classification = float(result[0])
+	db.session.commit()
+	return json.dumps({"classification" : float(result[0])})
 
 
 
