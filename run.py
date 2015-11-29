@@ -28,11 +28,12 @@ class Restaurant(db.Model):
 	classification = db.Column(db.Float)
 	coordenates = db.Column(db.String(50))
 
-	def __init__(self, restaurantname, localization, managerusername):
+	def __init__(self, restaurantname, localization, managerusername, coordenates):
 		self.restaurantname = restaurantname
 		self.localization = localization
 		self.managerusername = managerusername
 		self.classification = 0.0
+		self.coordenates = coordenates
 
 class Reviews(db.Model):
 	__tablename__ = "reviews"
@@ -164,7 +165,7 @@ def getRestaurants():
 
 	dic = {"restaurants" : []}
 	for i in rest:
-		dic["restaurants"].append({"name" : i.restaurantname, "id":i.restaurantID})
+		dic["restaurants"].append({"name" : i.restaurantname, "id":i.restaurantID, "classification" : i.classification})
 
 	return json.dumps(dic)
 
@@ -694,10 +695,12 @@ def signup():
     # read the posted values from the UI
     name =  request.args.get('inputName')
     localization = request.args.get('localization').lower()
+    coordenates = request.args.get('coordenates')
+    print coordenates
     username = session['username']
 
-    if name and localization and username:
-    	rest = Restaurant(name, localization, username)
+    if name and localization and username and coordenates:
+    	rest = Restaurant(name, localization, username, coordenates)
     	db.session.add(rest)
     	db.session.commit()
     	return render_template('accepted.html')
@@ -753,7 +756,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "lunch" and item.date == int(date):
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID, "classification" :rest.classification, "Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID, "classification" :rest.classification, "coordinates": rest.coordenates, "Menu": menu})
 				return json.dumps(response)
 
 			elif meal == "dinner":
@@ -763,7 +766,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "dinner"  and item.date == int(date):
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"coordinates": rest.coordenates,"Menu": menu})
 				return json.dumps(response)
 
 			else:
@@ -778,7 +781,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "Lunch":
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"coordinates": rest.coordenates,"Menu": menu})
 				return json.dumps(response)
 
 			elif meal == "Dinner":
@@ -788,7 +791,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "Dinner":
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"coordinates": rest.coordenates,"Menu": menu})
 				return json.dumps(response)
 
 			else:
@@ -801,7 +804,7 @@ def getLocalidade(city, meal, date):
 					if rest.restaurantID == item.restaurantID:
 						dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
+				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"coordinates": rest.coordenates,"Menu": menu})
 			return json.dumps(response)	
 
 def restock(data):
