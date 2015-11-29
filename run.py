@@ -97,6 +97,44 @@ def auth_callback():
 	return redirect('/')
 
 
+@app.route('/reservationsByUser', methods=['POST'])
+def getReservations():
+
+	data = request.get_data()
+	data = json.loads(data)
+
+	#Token check
+	response = json.dumps({"token": data["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"            								#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}												#content type
+	r = requests.post(url, data=response, headers=headers) 										#efetua o request
+	response = json.loads(r.text)
+
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+	else:
+		username = response['username']
+		url = "http://ogaviao.ddns.net:80/userresv/"+username     	#URL DO MANEL
+		r = requests.get(url) 										#efetua o request
+		data = json.loads(r.text)
+
+		currentTime = int(datetime.datetime.now().strftime("%s")) -24*60*60
+
+		response = {}
+		menu = []
+		for reserv in data["reservations"]:
+			if 	currentTime < int(reserv["timestamp"]):
+				info = Meal.query.filter((Meal.mealID-1) == int(reserv["itemID"])).all()
+				for i in info:
+					dateString = datetime.datetime.fromtimestamp(int(reserv["timestamp"])).strftime('%d/%m/%Y %H:%M')
+					menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image,"reserved":reserv["quantity"], "reservation_date": dateString})
+	
+		response["reservations"] = menu
+		return json.dumps(response)
+
+
+
 @app.route('/review', methods=['POST'])
 def setReview():
 	#recebe
@@ -126,6 +164,8 @@ def setReview():
 	history = Reviews.query.filter_by(userID=user_id, restaurantID = data["restaurantID"]).first()
 
 	if history != []:
+		print "a actualizar"
+		print int(data["review"])
 		history.review = int(data["review"])
 		db.session.commit()
 
