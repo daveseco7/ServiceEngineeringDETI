@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template, url_for, session, redirect
 from flask.ext.sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
+from sqlalchemy import func 
 import datetime
 import sqlite3
 import sys
@@ -24,12 +25,28 @@ class Restaurant(db.Model):
 	restaurantname = db.Column(db.String(50))
 	localization = db.Column(db.String(50))
 	managerusername = db.Column(db.String(50))
-	classification = db.Column(db.Integer)
+	classification = db.Column(db.Float)
+	coordenates = db.Column(db.String(50))
 
 	def __init__(self, restaurantname, localization, managerusername):
 		self.restaurantname = restaurantname
 		self.localization = localization
 		self.managerusername = managerusername
+		self.classification = 0.0
+
+class Reviews(db.Model):
+	__tablename__ = "reviews"
+	reviewID = db.Column(db.Integer, primary_key=True)
+	restaurantID = db.Column(db.Integer, db.ForeignKey("restaurant.restaurantID"))
+	restaurant = db.relationship(Restaurant)
+	userID = db.Column(db.Integer)
+	review = db.Column(db.Integer)
+
+	def __init__(self, restaurantID, userID, review):
+		self.restaurantID = restaurantID
+		self.userID = userID
+		self.review = review
+
 
 class Meal(db.Model):
 	__tablename__ = "meal"
@@ -39,7 +56,6 @@ class Meal(db.Model):
 	date = db.Column(db.Integer)
 	meal = db.Column(db.String(50))
 	image = db.Column(db.String(), nullable=True)
-
 
 	def __init__(self, name, price, date, meal,image):
 		self.name = name
@@ -78,6 +94,51 @@ def auth_callback():
 	if token:
 		session['access_token'] = token
 	return redirect('/')
+
+
+@app.route('/review', methods=['POST'])
+def setReview():
+	#recebe
+	#{
+	#"restaurantID": 1,
+	#"review" : 3 ,
+	#"token":"asdasdads"
+	#}
+
+	data = request.get_data()
+	data = json.loads(data)
+
+	#Token check
+	response = json.dumps({"token": data["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"            								#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}												#content type
+	r = requests.post(url, data=response, headers=headers) 										#efetua o request
+	response = json.loads(r.text)
+
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+	else:
+		username = response['username']
+		user_id = response['user_id']
+
+	history = Reviews.query.filter_by(userID=user_id).all()
+
+	if history != []:
+		print "USER ALREADY VOTED FOR THIS RESTAURANT"
+		return json.dumps({"200" : "USER ALREADY VOTED"})
+	else:
+		review = Reviews(data["restaurantID"], user_id, data["review"])
+		db.session.add(review)
+		db.session.commit()
+
+		result = db.session.query(func.avg(Reviews.review)).first()
+		rest = Restaurant.query.filter_by(restaurantID = data["restaurantID"]).first()
+	 	rest.classification = float(result[0])
+	 	db.session.commit()
+	 	return json.dumps({"200" : "VALID VOTE"})
+
+
 
 @app.route('/restaurants', methods=['POST'])
 def getRestaurants():
@@ -692,7 +753,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "lunch" and item.date == int(date):
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID, "classification" :rest.classification, "Menu": menu})
 				return json.dumps(response)
 
 			elif meal == "dinner":
@@ -702,7 +763,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "dinner"  and item.date == int(date):
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
 				return json.dumps(response)
 
 			else:
@@ -717,7 +778,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "Lunch":
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
 				return json.dumps(response)
 
 			elif meal == "Dinner":
@@ -727,7 +788,7 @@ def getLocalidade(city, meal, date):
 						if rest.restaurantID == item.restaurantID and item.meal == "Dinner":
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
 				return json.dumps(response)
 
 			else:
@@ -740,7 +801,7 @@ def getLocalidade(city, meal, date):
 					if rest.restaurantID == item.restaurantID:
 						dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
-				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"Menu": menu})
+				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"Menu": menu})
 			return json.dumps(response)	
 
 def restock(data):
