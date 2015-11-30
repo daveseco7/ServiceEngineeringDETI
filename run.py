@@ -120,7 +120,7 @@ def getFile():
 
 
 @app.route('/cancelReserv', methods=['POST'])
-def getFile():
+def cancelReserv():
 	data = request.get_data()
 	data = json.loads(data)
 
