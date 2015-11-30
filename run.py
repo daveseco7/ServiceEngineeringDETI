@@ -97,6 +97,49 @@ def auth_callback():
 	return redirect('/')
 
 
+@app.route('/getFile', methods=['POST'])
+def getFile():
+	data = request.get_data()
+	data = json.loads(data)
+
+	#Token check
+	response = json.dumps({"token": data["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"            								#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}												#content type
+	r = requests.post(url, data=response, headers=headers) 										#efetua o request
+	response = json.loads(r.text)
+
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+
+
+	url = "http://ogaviao.ddns.net/getfile/"+str(data["reservationID"])     	#URL DO MANEL
+	r = requests.get(url) 	
+	return r.text
+
+
+@app.route('/cancelReserv', methods=['POST'])
+def getFile():
+	data = request.get_data()
+	data = json.loads(data)
+
+	#Token check
+	response = json.dumps({"token": data["token"]})
+	url = "http://idp.moreirahelder.com/api/getuser"            								#URL DO HELDER
+	headers = {'Content-Type': 'application/json'}												#content type
+	r = requests.post(url, data=response, headers=headers) 										#efetua o request
+	response = json.loads(r.text)
+
+	if response["result"] == "error":
+		print "invalid token"
+		return json.dumps({"200" : "INVALID TOKEN"})
+
+	url = "http://ogaviao.ddns.net/cancelreserv/"+str(data["reservationID"])     	#URL DO MANEL
+	r = requests.get(url) 	
+	return r.text
+
+
 @app.route('/reservationsByUser', methods=['POST'])
 def getReservations():
 
