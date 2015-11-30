@@ -120,15 +120,19 @@ def getReservations():
 		data = json.loads(r.text)
 
 
+
 		currentTime = int(datetime.datetime.now().strftime("%s")) -24*60*60
 		response = {}
 		menu = []
 		for reserv in data["reservations"]:
 			if 	currentTime <= int(reserv["timestamp"]):
+				print reserv
 				info = Meal.query.filter((Meal.mealID-1) == int(reserv["itemID"])).all()
+				rest = Restaurant.query.filter(Restaurant.restaurantID == int (reserv["providerID"])).first()
+				restname = rest.restaurantname
 				for i in info:
 					dateString = datetime.datetime.fromtimestamp(int(reserv["timestamp"])).strftime('%d/%m/%Y %H:%M')
-					menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "date":i.date, "url" : i.image,"reserved":reserv["quantity"], "reservation_date": dateString})
+					menu.append({ "item" : i.name, "price": i.price, "itemID": i.mealID, "meal": i.meal, "reserved":reserv["quantity"], "reservation_date": dateString, "reservationID":reserv["reservationID"], "restaurantname": restname})
 	
 		response["reservations"] = menu
 		return json.dumps(response)
