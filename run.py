@@ -97,6 +97,39 @@ def auth_callback():
 	return redirect('/')
 
 
+@app.route('/api', methods=['GET'])
+def api():
+	menu = []
+	menu.append({"url":"/getFile","args":["token","reservationID"],"returns":"iCal File"});
+	menu.append({"url":"/cancelreserv","args":["token","reservationID"],"returns":"operation answer form reservation service"});
+	menu.append({"url":"/reservationsByUser","args":["token"],"returns":"All reservation from a certain user, drom this day forward"});
+	menu.append({"url":"/review","args":["token","restaurantID","review"],"returns":"The current classification for a certain restaurant"});
+
+	menu.append({"url":"/restaurants","args":["token"],"returns":"A json with all the restaurants from a certain manager user"});
+	menu.append({"url":"/getReservations/<restaurantID>","args":["token"],"returns":"A json with all the reservations for a certain restaurant"});
+	menu.append({"url":"/getReservationsByDate","args":["token","date", "restaurantID"],"returns":"A json with all the reservations for a certain date"});
+	menu.append({"url":"/getMenus","args":["token","date"],"returns":"A json file with all the menus for a certain date"});
+	menu.append({"url":"/addRestaurant","args":["token","restaurantname","localization", "coordenates"],"returns":"Error control message"});
+	menu.append({"url":"/localization/<path:path>'","args":[],"returns":"A json with all the meals avaiable in a certain city"});
+	menu.append({"url":"/localization/<path:path>/<meal>'","args":[],"returns":"A json with all the meals avaiable in a certain city for a specific meal type"});
+	menu.append({"url":"/localization/<path:path>/<meal>/<date>","args":[],"returns":"A json with all the meals avaiable in a certain city for a specific meal type and certain date"});
+	menu.append({"url":"/replenishstock","args":["token","providerID","price","name","quantity","date","url","meal"],"returns":"Error control message"});
+
+
+	menu.append({"url":"/doreservation","args":["restaurantID","itemID","quantity", "date","token"],"returns":"Error control message"});
+	menu.append({"url":"//getSMS","args":["body","senderAddress","requestid"],"returns":"Error control message"});
+	menu.append({"url":"/signup","args":["localization","coordenates", "name", "token or session"],"returns":"Error control html templates"});
+	menu.append({"url":"/","args":["token or valid session"],"returns":"Html template"});
+	menu.append({"url":"/getFile","args":["token","reservationID"],"returns":"iCal File"});
+	menu.append({"url":"/getFile","args":["token","reservationID"],"returns":"iCal File"});
+	menu.append({"url":"/getFile","args":["token","reservationID"],"returns":"iCal File"});
+	menu.append({"url":"/getFile","args":["token","reservationID"],"returns":"iCal File"});
+	menu.append({"url":"/getFile","args":["token","reservationID"],"returns":"iCal File"});
+
+	return json.dumps(menu)
+
+
+
 @app.route('/getFile', methods=['POST'])
 def getFile():
 	data = request.get_data()
@@ -115,8 +148,10 @@ def getFile():
 
 
 	url = "http://ogaviao.ddns.net/getfile/"+str(data["reservationID"])     	#URL DO MANEL
-	r = requests.get(url) 	
-	return r.text
+	r = requests.get(url)
+	response = dict()
+	response['data'] = r.text 	
+	return json.dumps(response)
 
 
 @app.route('/cancelReserv', methods=['POST'])
@@ -136,7 +171,7 @@ def cancelReserv():
 		return json.dumps({"200" : "INVALID TOKEN"})
 
 	url = "http://ogaviao.ddns.net/cancelreserv/"+str(data["reservationID"])     	#URL DO MANEL
-	r = requests.get(url) 	
+	r = requests.get(url)
 	return r.text
 
 
@@ -223,7 +258,7 @@ def setReview():
 		db.session.add(review)
 		db.session.commit()
 
-	result = db.session.query(func.avg(Reviews.review)).first()
+	result = db.session.query(func.avg(Reviews.review)).filter(Reviews.restaurantID == data["restaurantID"]).first()
 	rest = Restaurant.query.filter_by(restaurantID = data["restaurantID"]).first()
 	rest.classification = float(result[0])
 	db.session.commit()
@@ -349,18 +384,20 @@ def addRestaurant():
 	db.session.commit()
 	return json.dumps({"200" : "RESTAURANT ADDED"})
 
-@app.route('/localization/<path:path>/<meal>/<date>', methods=['GET']) 
-@app.route('/localization/<path:path>/<meal>', methods=['GET'])
+#@app.route('/localization/<path:path>/<meal>/<date>', methods=['GET']) 
+#@app.route('/localization/<path:path>/<meal>', methods=['GET'])
+@app.route('/localization/<path:path>/<date>', methods=['GET'])
 @app.route('/localization/<path:path>', methods=['GET'])
-def Localidade(path, meal=None, date=None):
-
+#def Localidade(path, meal=None, date=None):
+def Localidade(path, date=None):
+	meal = None
 	if request.method == 'GET':
-		if meal and date:
+#		if meal and date:
 			return getLocalidade(path, meal, date)
-		elif meal and not date:
-			return getLocalidade(path,meal,None)
-		else:
-			return getLocalidade(path, None, None)
+#		elif meal and not date:
+#			return getLocalidade(path,meal,None)
+#		else:
+#			return getLocalidade(path, None, None)
 
 	else:
 		return "Invalid request"
@@ -502,23 +539,26 @@ def getSMS():
 
 			if meal and date:
 				print date
+				print "meal and date"
 				data = getLocalidade(localidade, meal,date)
 			if meal and not date:
+				print "meal not date"
 				data = getLocalidade(localidade, meal,None)
 				print data
 			if not meal and not date:
+				print "not meal not date"
 				data = getLocalidade(localidade, None, None)
 
 			data = json.loads(data)
-			print data
 
 			for rest in data['Restaurants']:
 				response += "RESTAURANT: \"" + rest['Name'] + "\""
 				for menu in rest['Menu']:
-					response += " MENU: " + menu['item'] + " PRICE: " +  str(menu['price']) + " MEAL: " + str(menu['meal']) + " DATE: " + datetime.datetime.fromtimestamp(int(menu['date'])).strftime('%d-%m-%Y')
+					response += " MENU: " + menu['item'] + " PRICE: " +  str(menu['price']) + " MEAL: " + str(menu['meal']) + " DATE: " + menu['date']
 				response += "\n"
 
 			response = json.dumps({"body" : response , "status": 200})
+			print response
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"    			
 			headers = {'Content-Type': 'application/json'}								
 			r = requests.post(url, data=response, headers=headers)
@@ -698,7 +738,7 @@ def getSMS():
 
 				if response == "":
 					response = "No reservations avaiable"
-
+				print response
 				SMSresponse = json.dumps({"body" : response , "status": 200})
 				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
 				headers = {'Content-Type': 'application/json'}																			
@@ -731,6 +771,7 @@ def getSMS():
 
 				if response == "":
 					response = "No reservations avaiable"
+				print response
 				SMSresponse = json.dumps({"body" : response , "status": 200})
 				url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
 				headers = {'Content-Type': 'application/json'}																			
@@ -752,11 +793,7 @@ def getSMS():
 	elif sms[2] == 'help':
 		def proc5(number, requestID):
 			print "inside thread 5"
-			help = "To get avaiable restaurants and menus type: #1tapmeal#city#<CITYNAME>\n \
-					To add a meal to your menu type: #1tapmeal#add#menu#<MEALNAME>#<PRICE>#<QUANTITY>#<MEALTYPE>#<DATE DD/MM/YYYY> \n \
-					To make a reservation type: #1tapmeal#reservation#<CITY>#<RESTAURANT>#<MEALNAME>#<QUANTITY>#<DATE DD/MM/YYYY:HH:MM> \n \
-					To list all valid reservations type: #1tapmeal#list \
-					To list all valid reservations for a certain day type: #1tapmeal#list#date#<DATE DD/MM/YYYY> "
+			help = "To get avaiable restaurants and menus type: #1tapmeal#city#<CITYNAME>\n To add a meal to your menu type: #1tapmeal#add#menu#<MEALNAME>#<PRICE>#<QUANTITY>#<MEALTYPE>#<DATE DD/MM/YYYY> \n To make a reservation type: #1tapmeal#reservation#<CITY>#<RESTAURANT>#<MEALNAME>#<QUANTITY>#<DATE DD/MM/YYYY:HH:MM> \n To list all valid reservations type: #1tapmeal#list \nTo list all valid reservations for a certain day type: #1tapmeal#list#date#<DATE DD/MM/YYYY> "
 
 			SMSresponse = json.dumps({"body" : help , "status": 200})
 			url = "http://es2015sms.heldermoreira.pt/SMSgwServices/smsmessaging/outbound/"+ requestID +"/response/"
@@ -811,15 +848,15 @@ def home():
 
 def startSMSservice():
 	data = json.dumps({"serviceurl" : "http://46.101.14.39:80/getSMS", "name":"ComposerDave"})
-	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service"            	#URL DO LUIS
+	url = "http://es2015sms.heldermoreira.pt:80/SMSgwServices/smsmessaging/subscrive/service"            	#URL DO LUIS
 	headers = {'Content-Type': 'application/json'}															#content type
 	r = requests.put(url, data=data, headers=headers) 														#efetua o request
 	print json.loads(data)
 
 def setREGEXtoSMS():
 
-	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"#1tapmeal#city#.*"}, {"regex":"#1tapmeal#add#.*"} ,{"regex":"#1tapmeal#reservation#.*"}] })
-	url = "http://es2015sms.heldermoreira.pt:8080/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
+	data = json.dumps({"url" : "http://46.101.14.39:80/getSMS", "rules": [ { "regex":"#1tapmeal#city#.*"}, {"regex":"#1tapmeal#add#.*"} ,{"regex":"#1tapmeal#reservation#.*"}, {"regex":"#1tapmeal#help.*"},{"regex":"#1tapmeal#list#.*"}] })
+	url = "http://es2015sms.heldermoreira.pt:80/SMSgwServices/smsmessaging/subscrive/service/rule"            	#URL DO LUIS
 	headers = {'Content-Type': 'application/json'}																	#content type
 	r = requests.put(url, data=data, headers=headers) 																#efetua o request
 	print json.loads(data)
@@ -839,21 +876,21 @@ def getLocalidade(city, meal, date):
 		print "depois da date"
 		if meal:
 			print "date and meal"
-			if meal == "lunch":
+			if meal == "Lunch":
 				for rest in restaurants:
 					menu = []
 					for item in menus:
-						if rest.restaurantID == item.restaurantID and item.meal == "lunch" and item.date == int(date):
+						if rest.restaurantID == item.restaurantID and item.meal == "Lunch" and item.date == int(date):
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
 					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID, "classification" :rest.classification, "coordinates": rest.coordenates, "Menu": menu})
 				return json.dumps(response)
 
-			elif meal == "dinner":
+			elif meal == "Dinner":
 				for rest in restaurants:
 					menu = []
 					for item in menus:
-						if rest.restaurantID == item.restaurantID and item.meal == "dinner"  and item.date == int(date):
+						if rest.restaurantID == item.restaurantID and item.meal == "Dinner"  and item.date == int(date):
 							dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
 							menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString, "url":item.image})
 					response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID,"classification" :rest.classification,"coordinates": rest.coordenates,"Menu": menu})
@@ -861,6 +898,16 @@ def getLocalidade(city, meal, date):
 
 			else:
 				return json.dumps({"200":"INVALID MEAL OPTION"})
+
+		else:
+			for rest in restaurants:
+				menu = []
+				for item in menus:
+					if rest.restaurantID == item.restaurantID and item.date == int(date):
+						dateString = datetime.datetime.fromtimestamp(int(item.date)).strftime('%d/%m/%Y %H:%M')
+						menu.append({ "item" : item.name, "price": item.price, "itemID": item.mealID, "meal": item.meal, "date":dateString,"url":item.image})
+				response["Restaurants"].append({"Name" : rest.restaurantname, "ProviderID": rest.restaurantID, "classification":rest.classification, "coordinates": rest.coordenates, "Menu":menu})
+			return json.dumps(response)
 	else:
 		if meal:
 			print "no date but meal"
@@ -975,7 +1022,7 @@ if __name__ == '__main__':
 	#db.session.commit()
 
 	print "a enviar dados"
-	#startSMSservice()
-	#setREGEXtoSMS()
+	startSMSservice()
+	setREGEXtoSMS()
 	app.run(host='0.0.0.0',port=80)
 
